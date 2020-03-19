@@ -5,6 +5,7 @@
 package chardevgpio
 
 import (
+	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
@@ -12,11 +13,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Chip is a GPIO chips controlling a set of lines.
 type Chip struct {
 	GPIOChipInfo
 	Fd uintptr
 }
 
+// Open returns a new Chip for a GPIO character device from its path.
 func Open(path string) (Chip, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -32,6 +35,7 @@ func Open(path string) (Chip, error) {
 	return c, nil
 }
 
+// Close releases ressources helded by the Chip.
 func (c Chip) Close() error {
 	return syscall.Close(int(c.Fd))
 }
@@ -77,3 +81,55 @@ func (l Line) IsOpenSource() bool {
 func (l Line) IsKernel() bool {
 	return l.GPIOLineInfo.Flags&GPIOLINE_FLAG_KERNEL == GPIOLINE_FLAG_KERNEL
 }
+
+type HandleRequest struct {
+	GPIOHandleRequest
+}
+
+func (c Chip) RequestOutputLine(line int, consumer string) (HandleRequest, error) {
+	hr := HandleRequest{}
+	hr.Flags = GPIOHANDLE_REQUEST_OUTPUT
+	hr.LineOffsets[0] = uint32(line)
+	hr.Lines = 1
+	for i, c := range []byte(consumer) {
+		if i == 32 {
+			break
+		}
+		hr.Consumer[i] = c
+	}
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&hr.GPIOHandleRequest)))
+	if errno != 0 {
+		return hr, errno
+	}
+	return hr, nil
+}
+
+func (c Chip) RequestOutputLines(lines []int, consumer string) (HandleRequest, error) {
+	hr := HandleRequest{}
+
+	if len(lines) > GPIOHANDLES_MAX {
+		return hr, fmt.Errorf("Number of requested lines exceeds GPIOHANDLES_MAX (%d)", GPIOHANDLES_MAX)
+	}
+
+	hr.Flags = GPIOHANDLE_REQUEST_OUTPUT
+
+	for _, l := range lines {
+		hr.LineOffsets[hr.Lines] = uint32(l)
+		hr.Lines++
+	}
+
+	for i, c := range []byte(consumer) {
+		if i == 32 {
+			break
+		}
+		hr.Consumer[i] = c
+	}
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&hr.GPIOHandleRequest)))
+	if errno != 0 {
+		return hr, errno
+	}
+	return hr, nil
+}
+
+//func (hr HandleRequest)

@@ -32,23 +32,9 @@ func main() {
 	}
 	defer chip.Close()
 
-	outputRequest := chardevgpio.GPIOHandleRequest{}
-	outputRequest.LineOffsets[0] = uint32(*lineOffset)
-	outputRequest.Flags = chardevgpio.GPIOHANDLE_REQUEST_OUTPUT
-	outputRequest.Lines = uint32(1)
-
-	var consumer [32]byte
-	for i, c := range []byte(filepath.Base(os.Args[0])) {
-		if i == 32 {
-			break
-		}
-		consumer[i] = c
-	}
-	outputRequest.Consumer = consumer
-
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, chip.Fd, chardevgpio.GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&outputRequest)))
-	if errno != 0 {
-		fmt.Fprintln(os.Stderr, errno)
+	outputLine, err := chip.RequestOutputLine(*lineOffset, filepath.Base(os.Args[0]))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
@@ -56,10 +42,10 @@ func main() {
 	outputValue.Values[0] = 0
 	for {
 		outputValue.Values[0] = 1 - outputValue.Values[0]
-		_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(outputRequest.Fd), chardevgpio.GPIOHANDLE_SET_LINE_VALUES_IOCTL, uintptr(unsafe.Pointer(&outputValue)))
+		_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(outputLine.Fd), chardevgpio.GPIOHANDLE_SET_LINE_VALUES_IOCTL, uintptr(unsafe.Pointer(&outputValue)))
 		if errno != 0 {
 			fmt.Fprintln(os.Stderr, errno)
-			syscall.Close(int(outputRequest.Fd))
+			syscall.Close(int(outputLine.Fd))
 			os.Exit(1)
 		}
 		time.Sleep(500 * time.Millisecond)
