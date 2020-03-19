@@ -19,7 +19,7 @@ type GPIOChipInfo struct {
 	Lines uint32
 }
 
-/* Informational flags */
+// Informational flags
 const (
 	GPIOLINE_FLAG_KERNEL         = 1 << 0
 	GPIOLINE_FLAG_IS_OUT         = 1 << 1
@@ -39,10 +39,10 @@ type GPIOLineInfo struct {
 	Consumer [32]byte
 }
 
-/* Maximum number of requested handles */
+// GPIOHANDLES_MAX limits maximum number of handles that can be requested in a GPIOHandleRequest
 const GPIOHANDLES_MAX = 64
 
-/* Linerequest flags */
+// Line request flags
 const (
 	GPIOHANDLE_REQUEST_INPUT          = 1 << 0
 	GPIOHANDLE_REQUEST_OUTPUT         = 1 << 1
@@ -64,32 +64,57 @@ type GPIOHandleRequest struct {
 	Fd            int
 }
 
+// GPIOHandleConfig is the raw Linux structure to configure a GPIO handle request
 type GPIOHandleConfig struct {
 	Flags         uint32
 	DefaultValues [GPIOHANDLES_MAX]uint8
 	Padding       [4]uint32 /* padding for future use */
 }
 
+// GPIOHandleData is the raw Linux structure holding values for a GPIO handle.
+//
+// When getting the state of lines this contains the current state of a line.
+// When setting the state of lines these should contain the desired target state.
 type GPIOHandleData struct {
 	Values [GPIOHANDLES_MAX]uint8
 }
 
-/**
- * GPIOHANDLE_GET_LINE_VALUES_IOCTL _IOWR(0xB4, 0x08, unsafe.Sizeof(GPIOHandleData))
- * GPIOHANDLE_SET_LINE_VALUES_IOCTL _IOWR(0xB4, 0x09, unsafe.Sizeof(GPIOHandleData))
- */
 const (
 	GPIOHANDLE_GET_LINE_VALUES_IOCTL = ((_IOC_READ | _IOC_WRITE) << _IOC_DIRSHIFT) | (0xB4 << _IOC_TYPESHIFT) | (0x08 << _IOC_NRSHIFT) | (unsafe.Sizeof(GPIOHandleData{}) << _IOC_SIZESHIFT)
 	GPIOHANDLE_SET_LINE_VALUES_IOCTL = ((_IOC_READ | _IOC_WRITE) << _IOC_DIRSHIFT) | (0xB4 << _IOC_TYPESHIFT) | (0x09 << _IOC_NRSHIFT) | (unsafe.Sizeof(GPIOHandleData{}) << _IOC_SIZESHIFT)
 )
 
-/**
- * GPIO_GET_CHIPINFO_IOCTL = _IOR(0xB4, 0x01, unsafe.Sizeof(GPIOChipInfo{}))
- * GPIO_GET_LINEINFO_IOCTL = _IOWR(0xB4, 0x02, unsafe.Sizeof(GPIOLineInfo{}))
- * GPIO_GET_LINEHANDLE_IOCTL = _IOWR(0xB4, 0x03, unsafe.Sizeof(GPIOHandleRequest))
- */
+// GPIO event request flags
+const (
+	GPIOEVENT_REQUEST_RISING_EDGE  = 1 << 0
+	GPIOEVENT_REQUEST_FALLING_EDGE = 1 << 1
+	GPIOEVENT_REQUEST_BOTH_EDGES   = (1 << 0) | (1 << 1)
+)
+
+// GPIOEventRequest is the raw Linux structure containing the informations about a GPIO event request.
+type GPIOEventRequest struct {
+	LineOffset  uint32
+	HandleFlags uint32
+	EventFlags  uint32
+	Consumer    [32]byte
+	Fd          int
+}
+
+// GPIO event types
+const (
+	GPIOEVENT_EVENT_RISING_EDGE  = 0x01
+	GPIOEVENT_EVENT_FALLING_EDGE = 0x02
+)
+
+// GPIOEventData is the raw Linux structure holding values for an event occurrence
+type GPIOEventData struct {
+	Timestamp uint64
+	Id        uint32
+}
+
 const (
 	GPIO_GET_CHIPINFO_IOCTL   = (_IOC_READ << _IOC_DIRSHIFT) | (0xB4 << _IOC_TYPESHIFT) | (0x01 << _IOC_NRSHIFT) | (unsafe.Sizeof(GPIOChipInfo{}) << _IOC_SIZESHIFT)
 	GPIO_GET_LINEINFO_IOCTL   = ((_IOC_READ | _IOC_WRITE) << _IOC_DIRSHIFT) | (0xB4 << _IOC_TYPESHIFT) | (0x02 << _IOC_NRSHIFT) | (unsafe.Sizeof(GPIOLineInfo{}) << _IOC_SIZESHIFT)
 	GPIO_GET_LINEHANDLE_IOCTL = ((_IOC_READ | _IOC_WRITE) << _IOC_DIRSHIFT) | (0xB4 << _IOC_TYPESHIFT) | (0x03 << _IOC_NRSHIFT) | (unsafe.Sizeof(GPIOHandleRequest{}) << _IOC_SIZESHIFT)
+	GPIO_GET_LINEEVENT_IOCTL  = ((_IOC_READ | _IOC_WRITE) << _IOC_DIRSHIFT) | (0xB4 << _IOC_TYPESHIFT) | (0x04 << _IOC_NRSHIFT) | (unsafe.Sizeof(GPIOEventRequest{}) << _IOC_SIZESHIFT)
 )
