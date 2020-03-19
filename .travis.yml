@@ -2,3 +2,11 @@ language: go
 
 go:
   - 1.14.x
+
+script:
+  - go test -v .
+  - cd cmd/ioctl-gpio-list && go build
+  - cd cmd/ioctl-toggle-gpio && go build
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
