@@ -12,6 +12,7 @@ import (
  * For reference, see https://elixir.bootlin.com/linux/v5.5.9/source/include/uapi/linux/gpio.h
  */
 
+// GPIOChipInfo is the raw Linux structure containing the informations about a certain GPIO chip.
 type GPIOChipInfo struct {
 	Name  [32]byte
 	Label [32]byte
@@ -30,6 +31,7 @@ const (
 	GPIOLINE_FLAG_BIAS_DISABLE   = 1 << 7
 )
 
+// GPIOLineInfo is the raw Linux structure containing the informations about a certain GPIO line.
 type GPIOLineInfo struct {
 	Offset   uint32
 	Flags    uint32
@@ -52,6 +54,7 @@ const (
 	GPIOHANDLE_REQUEST_BIAS_DISABLE   = 1 << 7
 )
 
+// GPIOHandleRequest is the raw Linux structure containing the informations about a GPIO handle request.
 type GPIOHandleRequest struct {
 	LineOffsets   [GPIOHANDLES_MAX]uint32
 	Flags         uint32

@@ -25,35 +25,35 @@ func printChipInfo(path string) {
 	fmt.Printf("file = %s, name = %s, label = %s, lines = %d\n", path, chip.Name, chip.Label, chip.Lines)
 
 	for i := 0; i < int(chip.Lines); i++ {
-		l, err := chip.GetLine(i)
+		li, err := chip.LineInfo(i)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)
 		}
-		printLineInfo(l)
+		printLineInfo(li)
 	}
 }
 
-func printLineInfo(l chardevgpio.Line) {
+func printLineInfo(li chardevgpio.LineInfo) {
 
-	fmt.Printf("    line %2d: name = \"%s\", consumer = \"%s\", flags = ", l.Offset, l.Name, l.Consumer)
-	if l.IsOut() {
+	fmt.Printf("    line %2d: name = \"%s\", consumer = \"%s\", flags = ", li.Offset, li.Name, li.Consumer)
+	if li.IsOutput() {
 		fmt.Print("OUT")
 	} else {
 		fmt.Print("IN ")
 	}
-	if l.IsActiveLow() {
+	if li.IsActiveLow() {
 		fmt.Print(" ACTIVE_LOW ")
 	} else {
 		fmt.Print(" ACTIVE_HIGH")
 	}
-	if l.IsOpenDrain() {
+	if li.IsOpenDrain() {
 		fmt.Print(" OPEN_DRAIN")
 	}
-	if l.IsOpenSource() {
+	if li.IsOpenSource() {
 		fmt.Print(" OPEN_SOURCE")
 	}
-	if l.IsKernel() {
+	if li.IsKernel() {
 		fmt.Print(" KERNEL")
 	}
 

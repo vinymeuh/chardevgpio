@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Chip is a GPIO chips controlling a set of lines.
+// Chip is a GPIO chip controlling a set of lines.
 type Chip struct {
 	GPIOChipInfo
 	Fd uintptr
@@ -40,13 +40,15 @@ func (c Chip) Close() error {
 	return syscall.Close(int(c.Fd))
 }
 
-type Line struct {
+// LineInfo contains informations about a line.
+type LineInfo struct {
 	GPIOLineInfo
 }
 
-func (c Chip) GetLine(offset int) (Line, error) {
-	var l Line
-	l.GPIOLineInfo.Offset = uint32(offset)
+// LineInfo returns informations about the requested line.
+func (c Chip) LineInfo(line int) (LineInfo, error) {
+	var l LineInfo
+	l.GPIOLineInfo.Offset = uint32(line)
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEINFO_IOCTL, uintptr(unsafe.Pointer(&l.GPIOLineInfo)))
 	if errno != 0 {
 		return l, errno
@@ -54,49 +56,53 @@ func (c Chip) GetLine(offset int) (Line, error) {
 	return l, nil
 }
 
-func (l Line) IsOut() bool {
-	return l.GPIOLineInfo.Flags&GPIOLINE_FLAG_IS_OUT == GPIOLINE_FLAG_IS_OUT
+// IsOutput returns true if the line is configured as an output.
+func (li LineInfo) IsOutput() bool {
+	return li.GPIOLineInfo.Flags&GPIOLINE_FLAG_IS_OUT == GPIOLINE_FLAG_IS_OUT
 }
 
-func (l Line) IsIn() bool {
-	return !(l.GPIOLineInfo.Flags&GPIOLINE_FLAG_IS_OUT == GPIOLINE_FLAG_IS_OUT)
+// IsInput returns true if the line is configured as an input.
+func (li LineInfo) IsInput() bool {
+	return !(li.GPIOLineInfo.Flags&GPIOLINE_FLAG_IS_OUT == GPIOLINE_FLAG_IS_OUT)
 }
 
-func (l Line) IsActiveLow() bool {
-	return l.GPIOLineInfo.Flags&GPIOLINE_FLAG_ACTIVE_LOW == GPIOLINE_FLAG_ACTIVE_LOW
+// IsActiveLow returns true if the line is configured as active low.
+func (li LineInfo) IsActiveLow() bool {
+	return li.GPIOLineInfo.Flags&GPIOLINE_FLAG_ACTIVE_LOW == GPIOLINE_FLAG_ACTIVE_LOW
 }
 
-func (l Line) IsActiveHigh() bool {
-	return !(l.GPIOLineInfo.Flags&GPIOLINE_FLAG_ACTIVE_LOW == GPIOLINE_FLAG_ACTIVE_LOW)
+// IsActiveHigh returns true if the line is configured as active high.
+func (li LineInfo) IsActiveHigh() bool {
+	return !(li.GPIOLineInfo.Flags&GPIOLINE_FLAG_ACTIVE_LOW == GPIOLINE_FLAG_ACTIVE_LOW)
 }
 
-func (l Line) IsOpenDrain() bool {
-	return l.GPIOLineInfo.Flags&GPIOLINE_FLAG_OPEN_DRAIN == GPIOLINE_FLAG_OPEN_DRAIN
+// IsOpenDrain returns true if the line is configured as open drain.
+func (li LineInfo) IsOpenDrain() bool {
+	return li.GPIOLineInfo.Flags&GPIOLINE_FLAG_OPEN_DRAIN == GPIOLINE_FLAG_OPEN_DRAIN
 }
 
-func (l Line) IsOpenSource() bool {
-	return l.GPIOLineInfo.Flags&GPIOLINE_FLAG_OPEN_SOURCE == GPIOLINE_FLAG_OPEN_SOURCE
+// IsOpenSource returns true if the line is configured as open source.
+func (li LineInfo) IsOpenSource() bool {
+	return li.GPIOLineInfo.Flags&GPIOLINE_FLAG_OPEN_SOURCE == GPIOLINE_FLAG_OPEN_SOURCE
 }
 
-func (l Line) IsKernel() bool {
-	return l.GPIOLineInfo.Flags&GPIOLINE_FLAG_KERNEL == GPIOLINE_FLAG_KERNEL
+// IsKernel returns true if the line is configured as kernel.
+func (li LineInfo) IsKernel() bool {
+	return li.GPIOLineInfo.Flags&GPIOLINE_FLAG_KERNEL == GPIOLINE_FLAG_KERNEL
 }
 
-type HandleRequest struct {
+// Line represents a single requested line.
+type Line struct {
 	GPIOHandleRequest
 }
 
-func (c Chip) RequestOutputLine(line int, consumer string) (HandleRequest, error) {
-	hr := HandleRequest{}
+func (c Chip) RequestOutputLine(line int, consumer string) (Line, error) {
+	hr := Line{}
+	hr.Consumer = consumerFromString(consumer)
 	hr.Flags = GPIOHANDLE_REQUEST_OUTPUT
 	hr.LineOffsets[0] = uint32(line)
 	hr.Lines = 1
-	for i, c := range []byte(consumer) {
-		if i == 32 {
-			break
-		}
-		hr.Consumer[i] = c
-	}
+
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&hr.GPIOHandleRequest)))
 	if errno != 0 {
 		return hr, errno
@@ -104,25 +110,23 @@ func (c Chip) RequestOutputLine(line int, consumer string) (HandleRequest, error
 	return hr, nil
 }
 
-func (c Chip) RequestOutputLines(lines []int, consumer string) (HandleRequest, error) {
-	hr := HandleRequest{}
+// Lines represents a set of requested lines.
+type Lines struct {
+	GPIOHandleRequest
+}
+
+func (c Chip) RequestOutputLines(lines []int, consumer string) (Lines, error) {
+	hr := Lines{}
 
 	if len(lines) > GPIOHANDLES_MAX {
 		return hr, fmt.Errorf("Number of requested lines exceeds GPIOHANDLES_MAX (%d)", GPIOHANDLES_MAX)
 	}
 
+	hr.Consumer = consumerFromString(consumer)
 	hr.Flags = GPIOHANDLE_REQUEST_OUTPUT
-
 	for _, l := range lines {
 		hr.LineOffsets[hr.Lines] = uint32(l)
 		hr.Lines++
-	}
-
-	for i, c := range []byte(consumer) {
-		if i == 32 {
-			break
-		}
-		hr.Consumer[i] = c
 	}
 
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&hr.GPIOHandleRequest)))
@@ -132,4 +136,15 @@ func (c Chip) RequestOutputLines(lines []int, consumer string) (HandleRequest, e
 	return hr, nil
 }
 
-//func (hr HandleRequest)
+// helper that convert a string to an array of 32 bytes
+// Used to set GPIOHandleRequest.Consumer
+func consumerFromString(consumer string) [32]byte {
+	var b [32]byte
+	for i, c := range []byte(consumer) {
+		if i == 32 {
+			break
+		}
+		b[i] = c
+	}
+	return b
+}

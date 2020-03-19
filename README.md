@@ -11,4 +11,4 @@
 **chardevgio** provides two level of API:
 
 * **GPIOx** structures which mimics directly the Linux C code and must be used directly with IOCTL syscalls
-* A thin level of abstraction over **GPIOx** structures to hide IOCTL syscalls and simplifiy use
+* A thin level of abstraction over **GPIOx** structures to hide IOCTL syscalls and simplify use
