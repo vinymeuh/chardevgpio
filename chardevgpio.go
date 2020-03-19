@@ -35,7 +35,7 @@ func Open(path string) (Chip, error) {
 	return c, nil
 }
 
-// Close releases ressources helded by the Chip.
+// Close releases resources helded by the Chip.
 func (c Chip) Close() error {
 	return syscall.Close(int(c.Fd))
 }
@@ -97,17 +97,33 @@ type Line struct {
 }
 
 func (c Chip) RequestOutputLine(line int, consumer string) (Line, error) {
-	hr := Line{}
-	hr.Consumer = consumerFromString(consumer)
-	hr.Flags = GPIOHANDLE_REQUEST_OUTPUT
-	hr.LineOffsets[0] = uint32(line)
-	hr.Lines = 1
+	l := Line{}
+	l.Consumer = consumerFromString(consumer)
+	l.Flags = GPIOHANDLE_REQUEST_OUTPUT
+	l.LineOffsets[0] = uint32(line)
+	l.Lines = 1
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&hr.GPIOHandleRequest)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&l.GPIOHandleRequest)))
 	if errno != 0 {
-		return hr, errno
+		return l, errno
 	}
-	return hr, nil
+	return l, nil
+}
+
+// Close releases resources helded by the Line.
+func (l Line) Close() error {
+	return syscall.Close(l.Fd)
+}
+
+func (l Line) SetValue(value int) error {
+	hd := GPIOHandleData{}
+	hd.Values[0] = uint8(value)
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(l.Fd), GPIOHANDLE_SET_LINE_VALUES_IOCTL, uintptr(unsafe.Pointer(&hd)))
+	if errno != 0 {
+		return errno
+	}
+	return nil
 }
 
 // Lines represents a set of requested lines.
@@ -116,24 +132,29 @@ type Lines struct {
 }
 
 func (c Chip) RequestOutputLines(lines []int, consumer string) (Lines, error) {
-	hr := Lines{}
+	L := Lines{}
 
 	if len(lines) > GPIOHANDLES_MAX {
-		return hr, fmt.Errorf("Number of requested lines exceeds GPIOHANDLES_MAX (%d)", GPIOHANDLES_MAX)
+		return L, fmt.Errorf("Number of requested lines exceeds GPIOHANDLES_MAX (%d)", GPIOHANDLES_MAX)
 	}
 
-	hr.Consumer = consumerFromString(consumer)
-	hr.Flags = GPIOHANDLE_REQUEST_OUTPUT
+	L.Consumer = consumerFromString(consumer)
+	L.Flags = GPIOHANDLE_REQUEST_OUTPUT
 	for _, l := range lines {
-		hr.LineOffsets[hr.Lines] = uint32(l)
-		hr.Lines++
+		L.LineOffsets[L.Lines] = uint32(l)
+		L.Lines++
 	}
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&hr.GPIOHandleRequest)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&L.GPIOHandleRequest)))
 	if errno != 0 {
-		return hr, errno
+		return L, errno
 	}
-	return hr, nil
+	return L, nil
+}
+
+// Close releases resources helded by the Lines.
+func (L Lines) Close() error {
+	return syscall.Close(L.Fd)
 }
 
 // helper that convert a string to an array of 32 bytes

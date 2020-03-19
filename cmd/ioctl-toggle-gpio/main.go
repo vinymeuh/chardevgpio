@@ -12,12 +12,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
-	"unsafe"
 
 	"github.com/vinymeuh/chardevgpio"
-	"golang.org/x/sys/unix"
 )
 
 func main() {
@@ -37,15 +34,14 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	defer outputLine.Close()
 
-	outputValue := chardevgpio.GPIOHandleData{}
-	outputValue.Values[0] = 0
+	value := 0
 	for {
-		outputValue.Values[0] = 1 - outputValue.Values[0]
-		_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(outputLine.Fd), chardevgpio.GPIOHANDLE_SET_LINE_VALUES_IOCTL, uintptr(unsafe.Pointer(&outputValue)))
-		if errno != 0 {
-			fmt.Fprintln(os.Stderr, errno)
-			syscall.Close(int(outputLine.Fd))
+		value = 1 - value
+		err := outputLine.SetValue(value)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		time.Sleep(500 * time.Millisecond)
