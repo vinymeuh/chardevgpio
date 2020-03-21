@@ -4,6 +4,8 @@
 // Package chardevgpio is a low-level library to the Linux GPIO Character device API.
 package chardevgpio
 
+// +build linux
+
 import (
 	"fmt"
 	"os"
