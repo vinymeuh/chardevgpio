@@ -1,10 +1,10 @@
 // Copyright 2020 VinyMeuh. All rights reserved.
 // Use of the source code is governed by a MIT-style license that can be found in the LICENSE file.
 
+// +build linux
+
 // Package chardevgpio is a low-level library to the Linux GPIO Character device API.
 package chardevgpio
-
-// +build linux
 
 import (
 	"fmt"
