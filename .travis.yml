@@ -5,7 +5,8 @@ go:
 
 script:
   - go test -v .
-  - $(cd cmd/ioctl-gpio-list && go build)
+  - $(cd cmd/ioctl-epoll-gpio && go build)
+  - $(cd cmd/ioctl-list-gpio && go build)
   - $(cd cmd/ioctl-toggle-gpio && go build)
 
 after_success:
