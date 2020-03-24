@@ -5,9 +5,7 @@ go:
 
 script:
   - go test -v .
-  - $(cd cmd/ioctl-epoll-gpio && go build)
-  - $(cd cmd/ioctl-list-gpio && go build)
-  - $(cd cmd/ioctl-toggle-gpio && go build)
+  - cmd/build.sh
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

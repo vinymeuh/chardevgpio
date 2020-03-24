@@ -93,15 +93,26 @@ func (li LineInfo) IsKernel() bool {
 	return li.GPIOLineInfo.Flags&GPIOLINE_FLAG_KERNEL == GPIOLINE_FLAG_KERNEL
 }
 
-// Line represents a single requested line.
-type Line struct {
+// LineDirection is used to indicate if the requested line will be used as an input or an output.
+type LineDirection uint32
+
+const (
+	// LineIn setup a line as an input.
+	LineIn LineDirection = GPIOHANDLE_REQUEST_INPUT
+	// LineOut setup a line as an output.
+	LineOut = GPIOHANDLE_REQUEST_OUTPUT
+)
+
+// DataLine represents a single line to be used to send or receive data.
+type DataLine struct {
 	GPIOHandleRequest
 }
 
-func (c Chip) RequestOutputLine(line int, consumer string) (Line, error) {
-	l := Line{}
+// RequestDataLine requests to the chip a single DataLine to send or receive data.
+func (c Chip) RequestDataLine(line int, consumer string, direction LineDirection) (DataLine, error) {
+	l := DataLine{}
 	l.Consumer = consumerFromString(consumer)
-	l.Flags = GPIOHANDLE_REQUEST_OUTPUT
+	l.Flags = uint32(direction)
 	l.LineOffsets[0] = uint32(line)
 	l.Lines = 1
 
@@ -112,12 +123,13 @@ func (c Chip) RequestOutputLine(line int, consumer string) (Line, error) {
 	return l, nil
 }
 
-// Close releases resources helded by the Line.
-func (l Line) Close() error {
+// Close releases resources helded by the DataLine.
+func (l DataLine) Close() error {
 	return syscall.Close(l.Fd)
 }
 
-func (l Line) SetValue(value int) error {
+// SetValue writes value to a the DataLine.
+func (l DataLine) SetValue(value int) error {
 	hd := GPIOHandleData{}
 	hd.Values[0] = uint8(value)
 
@@ -128,13 +140,14 @@ func (l Line) SetValue(value int) error {
 	return nil
 }
 
-// Lines represents a set of requested lines.
-type Lines struct {
+// DataLines represents a set of lines to be used to send or receive data.
+type DataLines struct {
 	GPIOHandleRequest
 }
 
-func (c Chip) RequestOutputLines(lines []int, consumer string) (Lines, error) {
-	L := Lines{}
+// RequestDataLines requests to the chip a DataLines to send or receive data.
+func (c Chip) RequestDataLines(lines []int, consumer string, direction LineDirection) (DataLines, error) {
+	L := DataLines{}
 
 	if len(lines) > GPIOHANDLES_MAX {
 		return L, fmt.Errorf("Number of requested lines exceeds GPIOHANDLES_MAX (%d)", GPIOHANDLES_MAX)
@@ -155,7 +168,7 @@ func (c Chip) RequestOutputLines(lines []int, consumer string) (Lines, error) {
 }
 
 // Close releases resources helded by the Lines.
-func (L Lines) Close() error {
+func (L DataLines) Close() error {
 	return syscall.Close(L.Fd)
 }
 
