@@ -167,9 +167,63 @@ func (c Chip) RequestDataLines(lines []int, consumer string, direction LineDirec
 	return L, nil
 }
 
-// Close releases resources helded by the Lines.
+// Close releases resources helded by the DataLines.
 func (L DataLines) Close() error {
 	return syscall.Close(L.Fd)
+}
+
+type EventLine struct {
+	GPIOEventRequest
+	EpollFd int
+}
+
+type EventLineType uint32
+
+const (
+	RisingEdge   EventLineType = GPIOEVENT_REQUEST_RISING_EDGE
+	FaillingEdge               = GPIOEVENT_REQUEST_FALLING_EDGE
+	BothEdge                   = GPIOEVENT_REQUEST_BOTH_EDGES
+)
+
+func (c Chip) RequestEventLine(line int, consumer string, eventType EventLineType) (EventLine, error) {
+	var err error
+
+	l := EventLine{}
+	l.Consumer = consumerFromString(consumer)
+	l.LineOffset = uint32(line)
+	l.HandleFlags = GPIOHANDLE_REQUEST_INPUT
+	l.EventFlags = uint32(eventType)
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEEVENT_IOCTL, uintptr(unsafe.Pointer(&l)))
+	if errno != 0 {
+		return l, errno
+	}
+
+	// (man epoll) an application that employs the EPOLLET flag should use nonblocking file descriptors
+	unix.SetNonblock(l.Fd, true)
+
+	// Create an epoll fd
+	l.EpollFd, err = unix.EpollCreate1(unix.EPOLL_CLOEXEC)
+	if err != nil {
+		return l, err
+	}
+
+	// Add the EventLine fd to the epoll fd
+	var epEvent unix.EpollEvent
+	epEvent.Events = unix.EPOLLIN | unix.EPOLLET
+	epEvent.Fd = int32(l.Fd)
+	if err := unix.EpollCtl(l.EpollFd, unix.EPOLL_CTL_ADD, l.Fd, &epEvent); err != nil {
+		return l, err
+	}
+
+	return l, nil
+}
+
+// Close releases resources helded by the EventLine.
+func (l EventLine) Close() error {
+	unix.Close(l.EpollFd)
+	err2 := unix.Close(l.Fd)
+	return err2 // TODO: concatenate errors
 }
 
 // helper that convert a string to an array of 32 bytes

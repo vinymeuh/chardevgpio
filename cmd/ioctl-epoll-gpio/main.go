@@ -14,7 +14,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"unsafe"
+	"path/filepath"
 
 	"golang.org/x/sys/unix"
 
@@ -29,45 +29,23 @@ func main() {
 	// Open the chip
 	chip, err := chardevgpio.Open(*devicePath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintf(os.Stderr, "chardevgpio.Open: %s\n", err)
 		os.Exit(1)
 	}
 	defer chip.Close()
 
-	// Request an event line
-	eventLine := chardevgpio.GPIOEventRequest{}
-	eventLine.LineOffset = uint32(*lineOffset)
-	eventLine.HandleFlags = chardevgpio.GPIOHANDLE_REQUEST_INPUT
-	eventLine.EventFlags = chardevgpio.GPIOEVENT_REQUEST_BOTH_EDGES
-
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, chip.Fd, chardevgpio.GPIO_GET_LINEEVENT_IOCTL, uintptr(unsafe.Pointer(&eventLine)))
-	if errno != 0 {
-		fmt.Fprintln(os.Stderr, errno)
-		os.Exit(1)
-	}
-	unix.SetNonblock(eventLine.Fd, true) // (man epoll) an application that employs the EPOLLET flag should use nonblocking file descriptors
-
-	// Create an epoll fd
-	epfd, err := unix.EpollCreate1(unix.EPOLL_CLOEXEC)
+	// Request the EventLine
+	eventLine, err := chip.RequestEventLine(*lineOffset, filepath.Base(os.Args[0]), chardevgpio.BothEdge)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		fmt.Fprintf(os.Stderr, "EpollCreate1: %s\n", err)
+		fmt.Fprintf(os.Stderr, "chip.RequestEventLine: %s\n", err)
 		os.Exit(1)
 	}
-	defer unix.Close(epfd)
+	defer eventLine.Close()
 
-	// Add the event line fd to the epoll fd
-	var event unix.EpollEvent
-	event.Events = unix.EPOLLIN | unix.EPOLLET
-	event.Fd = int32(eventLine.Fd)
-	if err := unix.EpollCtl(epfd, unix.EPOLL_CTL_ADD, eventLine.Fd, &event); err != nil {
-		fmt.Fprintf(os.Stderr, "EpollCtl: %s\n", err)
-		os.Exit(1)
-	}
-
+	// Wait for events
 	var events [1]unix.EpollEvent
 	for {
-		nevents, err := unix.EpollWait(epfd, events[:], -1)
+		nevents, err := unix.EpollWait(eventLine.EpollFd, events[:], -1)
 		if err != nil {
 			if err == unix.EINTR {
 				continue
@@ -96,6 +74,7 @@ func main() {
 			}
 		}
 	}
+
 }
 
 // How to know that buffer size must be 16 ?
