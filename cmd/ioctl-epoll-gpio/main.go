@@ -9,17 +9,23 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/vinymeuh/chardevgpio"
 )
+
+func printEventData(evd chardevgpio.GPIOEventData) {
+	fmt.Printf("[%d.%09d]", evd.Timestamp/1000000000, evd.Timestamp%1000000000)
+	if evd.Id&chardevgpio.GPIOEVENT_EVENT_RISING_EDGE == chardevgpio.GPIOEVENT_EVENT_RISING_EDGE {
+		fmt.Fprintln(os.Stdout, " RISING")
+	}
+	if evd.Id&chardevgpio.GPIOEVENT_EVENT_FALLING_EDGE == chardevgpio.GPIOEVENT_EVENT_FALLING_EDGE {
+		fmt.Fprintln(os.Stdout, " FALLING")
+	}
+}
 
 func main() {
 	devicePath := flag.String("device", "/dev/gpiochip0", "GPIO device path")
@@ -34,70 +40,22 @@ func main() {
 	}
 	defer chip.Close()
 
-	// Request the EventLine
-	eventLine, err := chip.RequestEventLine(*lineOffset, filepath.Base(os.Args[0]), chardevgpio.BothEdge)
+	// Create the EventLineWatcher
+	watcher, err := chardevgpio.NewEventLineWatcher()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "chip.RequestEventLine: %s\n", err)
+		fmt.Fprintf(os.Stderr, "chardevgpio.NewEventLineWatcher: %s\n", err)
 		os.Exit(1)
 	}
-	defer eventLine.Close()
+	defer watcher.Close()
 
-	// Wait for events
-	var events [1]unix.EpollEvent
-	for {
-		nevents, err := unix.EpollWait(eventLine.EpollFd, events[:], -1)
-		if err != nil {
-			if err == unix.EINTR {
-				continue
-			}
-			fmt.Fprintf(os.Stderr, "EpollWait: %s\n", err)
-			os.Exit(1)
-		}
-
-		for i := 0; i < nevents; i++ {
-			ev := events[i]
-			if ev.Events&unix.EPOLLIN != 0 {
-				evds, err := readEventsData(int(ev.Fd))
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "readEventData: %s\n", err)
-				}
-
-				for _, evd := range evds {
-					fmt.Printf("[%d.%09d]", evd.Timestamp/1000000000, evd.Timestamp%1000000000)
-					if evd.Id&chardevgpio.GPIOEVENT_EVENT_RISING_EDGE == chardevgpio.GPIOEVENT_EVENT_RISING_EDGE {
-						fmt.Fprintln(os.Stdout, " RISING")
-					}
-					if evd.Id&chardevgpio.GPIOEVENT_EVENT_FALLING_EDGE == chardevgpio.GPIOEVENT_EVENT_FALLING_EDGE {
-						fmt.Fprintln(os.Stdout, " FALLING")
-					}
-				}
-			}
-		}
+	if err := watcher.AddEvent(chip, *lineOffset, filepath.Base(os.Args[0]), chardevgpio.BothEdge); err != nil {
+		fmt.Fprintf(os.Stderr, "watcher.AddEvent: %s\n", err)
+		os.Exit(1)
 	}
 
-}
-
-// How to know that buffer size must be 16 ?
-// GPIOEventData = uint64 + uint32 = 8 + 4 = 12 !?
-const BUFFER_SIZE = 16
-
-func readEventsData(fd int) ([]chardevgpio.GPIOEventData, error) {
-	var evds []chardevgpio.GPIOEventData
-	var evd chardevgpio.GPIOEventData
-	var buffer = make([]byte, BUFFER_SIZE)
-	for {
-		_, err := unix.Read(fd, buffer)
-		if err != nil {
-			if err == unix.EAGAIN {
-				return evds, nil
-			}
-			return evds, err
-		}
-
-		err = binary.Read(bytes.NewReader(buffer), binary.LittleEndian, &evd)
-		if err != nil {
-			return evds, err
-		}
-		evds = append(evds, evd)
+	err = watcher.WaitForEver(printEventData)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "watcher.WaitForEver: %s\n", err)
+		os.Exit(1)
 	}
 }
