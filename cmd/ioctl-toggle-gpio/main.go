@@ -29,7 +29,7 @@ func main() {
 	}
 	defer chip.Close()
 
-	outputLine, err := chip.RequestDataLine(*lineOffset, filepath.Base(os.Args[0]), chardevgpio.LineOut)
+	outputLine, err := chip.RequestOutputLine(*lineOffset, 0, filepath.Base(os.Args[0]))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

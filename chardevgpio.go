@@ -110,13 +110,29 @@ type DataLine struct {
 	GPIOHandleRequest
 }
 
-// RequestDataLine requests to the chip a single DataLine to send or receive data.
-func (c Chip) RequestDataLine(line int, consumer string, direction LineDirection) (DataLine, error) {
+// RequestOutputLine requests to the chip a single DataLine to send data.
+func (c Chip) RequestOutputLine(line int, value int, consumer string) (DataLine, error) {
 	l := DataLine{}
+	l.Flags = GPIOHANDLE_REQUEST_OUTPUT
+	l.LineOffsets[0] = uint32(line)
+	l.DefaultValues[0] = uint8(value)
+	l.Lines = 1
 	l.Consumer = consumerFromString(consumer)
-	l.Flags = uint32(direction)
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&l.GPIOHandleRequest)))
+	if errno != 0 {
+		return l, errno
+	}
+	return l, nil
+}
+
+// RequestInputLine requests to the chip a single DataLine to receive data.
+func (c Chip) RequestInputLine(line int, consumer string) (DataLine, error) {
+	l := DataLine{}
+	l.Flags = GPIOHANDLE_REQUEST_INPUT
 	l.LineOffsets[0] = uint32(line)
 	l.Lines = 1
+	l.Consumer = consumerFromString(consumer)
 
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&l.GPIOHandleRequest)))
 	if errno != 0 {
@@ -147,20 +163,44 @@ type DataLines struct {
 	GPIOHandleRequest
 }
 
-// RequestDataLines requests to the chip a DataLines to send or receive data.
-func (c Chip) RequestDataLines(lines []int, consumer string, direction LineDirection) (DataLines, error) {
+// RequestOutputLines requests to the chip a DataLines to receive data.
+func (c Chip) RequestOutputLines(lines []int, values []int, consumer string) (DataLines, error) {
 	L := DataLines{}
+	if len(lines) > GPIOHANDLES_MAX {
+		return L, fmt.Errorf("Number of requested lines exceeds GPIOHANDLES_MAX (%d)", GPIOHANDLES_MAX)
+	}
+	if len(values) < len(lines) {
+		return L, fmt.Errorf("Not enough values to initialize lines")
+	}
 
+	L.Flags = GPIOHANDLE_REQUEST_OUTPUT
+	for i := range lines {
+		L.LineOffsets[i] = uint32(lines[i])
+		L.DefaultValues[i] = uint8(values[i])
+		L.Lines++
+	}
+	L.Consumer = consumerFromString(consumer)
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&L.GPIOHandleRequest)))
+	if errno != 0 {
+		return L, errno
+	}
+	return L, nil
+}
+
+// RequestInputLines requests to the chip a DataLines to send data.
+func (c Chip) RequestInputLines(lines []int, consumer string) (DataLines, error) {
+	L := DataLines{}
 	if len(lines) > GPIOHANDLES_MAX {
 		return L, fmt.Errorf("Number of requested lines exceeds GPIOHANDLES_MAX (%d)", GPIOHANDLES_MAX)
 	}
 
-	L.Consumer = consumerFromString(consumer)
-	L.Flags = GPIOHANDLE_REQUEST_OUTPUT
-	for _, l := range lines {
-		L.LineOffsets[L.Lines] = uint32(l)
+	L.Flags = GPIOHANDLE_REQUEST_INPUT
+	for i := range lines {
+		L.LineOffsets[i] = uint32(lines[i])
 		L.Lines++
 	}
+	L.Consumer = consumerFromString(consumer)
 
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, GPIO_GET_LINEHANDLE_IOCTL, uintptr(unsafe.Pointer(&L.GPIOHandleRequest)))
 	if errno != 0 {
