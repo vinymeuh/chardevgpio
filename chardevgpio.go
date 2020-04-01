@@ -146,7 +146,7 @@ func (l DataLine) Close() error {
 	return syscall.Close(l.Fd)
 }
 
-// SetValue writes value to a the DataLine.
+// SetValue writes value to a DataLine.
 func (l DataLine) SetValue(value int) error {
 	hd := GPIOHandleData{}
 	hd.Values[0] = uint8(value)
@@ -207,6 +207,23 @@ func (c Chip) RequestInputLines(lines []int, consumer string) (DataLines, error)
 		return L, errno
 	}
 	return L, nil
+}
+
+// SetValues writes value to a DataLines.
+func (L DataLines) SetValues(values []int) error {
+	hd := GPIOHandleData{}
+	for i := range values {
+		if i > GPIOHANDLES_MAX-1 {
+			break
+		}
+		hd.Values[i] = uint8(values[i])
+	}
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(L.Fd), GPIOHANDLE_SET_LINE_VALUES_IOCTL, uintptr(unsafe.Pointer(&hd)))
+	if errno != 0 {
+		return errno
+	}
+	return nil
 }
 
 // Close releases resources helded by the DataLines.
