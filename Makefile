@@ -1,0 +1,26 @@
+.DEFAULT_GOAL := help
+
+GOFLAGS := -trimpath
+SUBDIRS := $(wildcard cmd/*/.)
+
+build: ## Build
+	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux go build ${GOFLAGS}))
+	@:
+
+build-arm6: ## Build for ARM6
+	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux GOARCH=arm GOARM=6 go build ${GOFLAGS}))
+	@:
+
+build-arm7: ## Build for ARM7
+	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux GOARCH=arm GOARM=7 go build ${GOFLAGS}))
+	@:
+
+test-prepare: ## Load gpio-mockup kernel module (sudo)
+	sudo modprobe gpio-mockup gpio_mockup_ranges=0,10 gpio_mockup_named_lines=1
+
+test: ## Run tests
+	go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+help: ## Show Help
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@exit 0
