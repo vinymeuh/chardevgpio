@@ -17,12 +17,12 @@ import (
 	"github.com/vinymeuh/chardevgpio"
 )
 
-func printEventData(evd chardevgpio.GPIOEventData) {
+func printEventData(evd chardevgpio.Event) {
 	fmt.Printf("[%d.%09d]", evd.Timestamp/1000000000, evd.Timestamp%1000000000)
-	if evd.Id&chardevgpio.GPIOEVENT_EVENT_RISING_EDGE == chardevgpio.GPIOEVENT_EVENT_RISING_EDGE {
+	if evd.ID&chardevgpio.EventRisingEdge == chardevgpio.EventRisingEdge {
 		fmt.Fprintln(os.Stdout, " RISING")
 	}
-	if evd.Id&chardevgpio.GPIOEVENT_EVENT_FALLING_EDGE == chardevgpio.GPIOEVENT_EVENT_FALLING_EDGE {
+	if evd.ID&chardevgpio.EventFallingEdge == chardevgpio.EventFallingEdge {
 		fmt.Fprintln(os.Stdout, " FALLING")
 	}
 }
@@ -48,7 +48,7 @@ func main() {
 	}
 	defer watcher.Close()
 
-	if err := watcher.AddEvent(chip, *lineOffset, filepath.Base(os.Args[0]), chardevgpio.BothEdge); err != nil {
+	if err := watcher.AddEvent(chip, *lineOffset, filepath.Base(os.Args[0]), chardevgpio.BothEdges); err != nil {
 		fmt.Fprintf(os.Stderr, "watcher.AddEvent: %s\n", err)
 		os.Exit(1)
 	}
