@@ -11,6 +11,11 @@ import (
 	"testing"
 )
 
+// import (
+// 	"fmt"
+// 	"testing"
+// )
+
 const (
 	gpioDevicePath = "/dev/gpiochip0"
 	chipName       = "gpiochip0"

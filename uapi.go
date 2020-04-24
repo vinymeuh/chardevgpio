@@ -7,30 +7,32 @@ package chardevgpio
 
 import "unsafe"
 
+// Code in this file mimics directly the Linux kernel code
+
 /**
- * Code in this file mimics directly the Linux kernel code.
- *
- * For reference, see:
- *  - https://elixir.bootlin.com/linux/v5.5.9/source/include/uapi/asm-generic/ioctl.h
- *  - https://elixir.bootlin.com/linux/v5.5.9/source/include/uapi/linux/gpio.h
+ * ioctl constants from uapi/asm-generic/ioctl.h
+ * For reference see https://elixir.bootlin.com/linux/v5.5.9/source/include/uapi/asm-generic/ioctl.h
  */
-
 const (
-	iocNRBITS   = 8
-	iocTYPEBITS = 8
+	iocNRBits   = 8
+	iocTypeBits = 8
 
-	iocSIZEBITS = 14
-	iocDIRBITS  = 2
+	iocSizeBits = 14
+	iocDirBits  = 2
 
-	iocNRSHIFT   = 0
-	iocTYPESHIFT = iocNRSHIFT + iocNRBITS
-	iocSIZESHIFT = iocTYPESHIFT + iocTYPEBITS
-	iocDIRSHIFT  = iocSIZESHIFT + iocSIZEBITS
+	iocNRShift   = 0
+	iocTypeShift = iocNRShift + iocNRBits
+	iocSizeShift = iocTypeShift + iocTypeBits
+	iocDirShift  = iocSizeShift + iocSizeBits
 
-	iocNONE  = 0
-	iocREAD  = 2
-	iocWRITE = 1
+	iocRead  = 2
+	iocWrite = 1
 )
+
+/*
+ * gpio code from uapi/linux/gpio.h
+ * For reference see https://elixir.bootlin.com/linux/v5.5.9/source/include/uapi/linux/gpio.h
+ */
 
 // ChipInfo contains informations about a GPIO chip.
 type ChipInfo struct {
@@ -100,8 +102,8 @@ type Data struct {
 }
 
 const (
-	gpioHandleGetLineValuesIOCTL = ((iocREAD | iocWRITE) << iocDIRSHIFT) | (0xB4 << iocTYPESHIFT) | (0x08 << iocNRSHIFT) | (unsafe.Sizeof(Data{}) << iocSIZESHIFT)
-	gpioHandleSetLineValuesIOCTL = ((iocREAD | iocWRITE) << iocDIRSHIFT) | (0xB4 << iocTYPESHIFT) | (0x09 << iocNRSHIFT) | (unsafe.Sizeof(Data{}) << iocSIZESHIFT)
+	gpioHandleGetLineValuesIOCTL = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x08 << iocNRShift) | (unsafe.Sizeof(Data{}) << iocSizeShift)
+	gpioHandleSetLineValuesIOCTL = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x09 << iocNRShift) | (unsafe.Sizeof(Data{}) << iocSizeShift)
 )
 
 // EventLineType defines the kind of event to wait on an event line.
@@ -136,8 +138,8 @@ type Event struct {
 }
 
 const (
-	gpioGetChipInfoIOCTL   = (iocREAD << iocDIRSHIFT) | (0xB4 << iocTYPESHIFT) | (0x01 << iocNRSHIFT) | (unsafe.Sizeof(ChipInfo{}) << iocSIZESHIFT)
-	gpioGetLineInfoIOCTL   = ((iocREAD | iocWRITE) << iocDIRSHIFT) | (0xB4 << iocTYPESHIFT) | (0x02 << iocNRSHIFT) | (unsafe.Sizeof(LineInfo{}) << iocSIZESHIFT)
-	gpioGetLineHandleIOCTL = ((iocREAD | iocWRITE) << iocDIRSHIFT) | (0xB4 << iocTYPESHIFT) | (0x03 << iocNRSHIFT) | (unsafe.Sizeof(DataLine{}) << iocSIZESHIFT)
-	gpioGetLineEventIOCTL  = ((iocREAD | iocWRITE) << iocDIRSHIFT) | (0xB4 << iocTYPESHIFT) | (0x04 << iocNRSHIFT) | (unsafe.Sizeof(EventLine{}) << iocSIZESHIFT)
+	gpioGetChipInfoIOCTL   = (iocRead << iocDirShift) | (0xB4 << iocTypeShift) | (0x01 << iocNRShift) | (unsafe.Sizeof(ChipInfo{}) << iocSizeShift)
+	gpioGetLineInfoIOCTL   = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x02 << iocNRShift) | (unsafe.Sizeof(LineInfo{}) << iocSizeShift)
+	gpioGetLineHandleIOCTL = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x03 << iocNRShift) | (unsafe.Sizeof(DataLine{}) << iocSizeShift)
+	gpioGetLineEventIOCTL  = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x04 << iocNRShift) | (unsafe.Sizeof(EventLine{}) << iocSizeShift)
 )

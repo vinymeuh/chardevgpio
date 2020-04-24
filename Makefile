@@ -19,10 +19,13 @@ coverage: ## Show test coverage
 	go tool cover -func=coverage.txt
 	go tool cover -html=coverage.txt
 
-test-prepare: ## Load gpio-mockup kernel module (sudo)
+test-prepare: ## Mount debugfs and load gpio-mockup kernel module (sudo)
+	sudo mount -t debugfs none /sys/kernel/debug
+	sudo rmmod gpio-mockup
 	sudo modprobe gpio-mockup gpio_mockup_ranges=0,10 gpio_mockup_named_lines=1
 
 test: ## Run tests
+	modprobe gpio-mockup gpio_mockup_ranges=0,10 gpio_mockup_named_lines=1
 	go test -race -coverprofile=coverage.txt -covermode=atomic .
 
 help: ## Show Help
