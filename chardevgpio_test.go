@@ -4,11 +4,13 @@
 // +build linux
 
 // Package chardevgpio is a low-level library to the Linux GPIO Character device API.
-package chardevgpio
+package chardevgpio_test
 
 import (
 	"fmt"
 	"testing"
+
+	"github.com/vinymeuh/chardevgpio"
 )
 
 // import (
@@ -24,7 +26,7 @@ const (
 )
 
 func TestChip(t *testing.T) {
-	chip, err := Open(gpioDevicePath)
+	chip, err := chardevgpio.Open(gpioDevicePath)
 	if err != nil {
 		t.Fatalf("Unable to open gpio device '%s', err='%s'", gpioDevicePath, err)
 	}

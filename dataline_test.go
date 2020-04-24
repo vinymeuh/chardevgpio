@@ -4,14 +4,16 @@
 // +build linux
 
 // Package chardevgpio is a low-level library to the Linux GPIO Character device API.
-package chardevgpio
+package chardevgpio_test
 
 import (
 	"testing"
+
+	"github.com/vinymeuh/chardevgpio"
 )
 
 func TestOutputDataLine(t *testing.T) {
-	chip, err := Open(gpioDevicePath)
+	chip, err := chardevgpio.Open(gpioDevicePath)
 	if err != nil {
 		t.Fatalf("Unable to open gpio device '%s', err='%s'", gpioDevicePath, err)
 	}
@@ -25,7 +27,7 @@ func TestOutputDataLine(t *testing.T) {
 }
 
 func TestInputDataLine(t *testing.T) {
-	chip, err := Open(gpioDevicePath)
+	chip, err := chardevgpio.Open(gpioDevicePath)
 	if err != nil {
 		t.Fatalf("Unable to open gpio device '%s', err='%s'", gpioDevicePath, err)
 	}
@@ -39,18 +41,18 @@ func TestInputDataLine(t *testing.T) {
 }
 
 func TestEventLine(t *testing.T) {
-	chip, err := Open(gpioDevicePath)
+	chip, err := chardevgpio.Open(gpioDevicePath)
 	if err != nil {
 		t.Fatalf("Unable to open gpio device '%s', err='%s'", gpioDevicePath, err)
 	}
 
-	watcher, err := NewEventLineWatcher()
+	watcher, err := chardevgpio.NewEventLineWatcher()
 	if err != nil {
 		t.Fatalf("Unable to create EventLineWatcher: %s\n", err)
 	}
 	defer watcher.Close()
 
-	if err := watcher.AddEvent(chip, 1, "TestEventLine", BothEdges); err != nil {
+	if err := watcher.AddEvent(chip, 1, "TestEventLine", chardevgpio.BothEdges); err != nil {
 		t.Fatalf("Unable to add line to watcher: %s\n", err)
 	}
 }
