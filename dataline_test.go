@@ -18,7 +18,7 @@ func TestOutputDataLine(t *testing.T) {
 		t.Fatalf("Unable to open gpio device '%s', err='%s'", gpioDevicePath, err)
 	}
 
-	_, err = chip.RequestOutputLine(11, 0, "TestOutputDataLine")
+	_, err = chip.RequestOutputLine(0, 0, "TestOutputDataLine")
 	if err != nil {
 		t.Fatalf("Unable to get line 0 for output, err='%s'", err)
 	}
@@ -52,7 +52,7 @@ func TestEventLine(t *testing.T) {
 	}
 	defer watcher.Close()
 
-	if err := watcher.AddEvent(chip, 1, "TestEventLine", chardevgpio.BothEdges); err != nil {
+	if err := watcher.AddEvent(chip, 2, "TestEventLine", chardevgpio.BothEdges); err != nil {
 		t.Fatalf("Unable to add line to watcher: %s\n", err)
 	}
 }

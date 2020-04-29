@@ -28,7 +28,7 @@ func (l DataLine) SetValue(value int) error {
 
 // Close releases resources helded by the DataLine.
 func (l DataLine) Close() error {
-	return syscall.Close(l.Fd)
+	return syscall.Close(int(l.Fd))
 }
 
 // DataLines represents a set of lines to be used to send or receive data.
@@ -55,5 +55,5 @@ func (L DataLines) SetValues(values []int) error {
 
 // Close releases resources helded by the DataLines.
 func (L DataLines) Close() error {
-	return syscall.Close(L.Fd)
+	return syscall.Close(int(L.Fd))
 }

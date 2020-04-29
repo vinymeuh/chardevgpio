@@ -83,7 +83,7 @@ type DataLine struct {
 	DefaultValues [gpioHandlesMax]uint8
 	Consumer      [32]byte
 	Lines         uint32
-	Fd            int
+	Fd            int32 // C int is 32 bits even on x86_64
 }
 
 // DataLineConfig is the structure to configure a DataLine.
@@ -122,7 +122,7 @@ type EventLine struct {
 	HandleFlags uint32
 	EventFlags  uint32
 	Consumer    [32]byte
-	Fd          int
+	Fd          int32 // C int is 32 bits even on x86_64
 }
 
 // Event types

@@ -38,16 +38,16 @@ func (elw *EventLineWatcher) AddEvent(chip Chip, line int, consumer string, even
 		return errno
 	}
 	// an application that employs the EPOLLET flag should use nonblocking file descriptors (man epoll)
-	unix.SetNonblock(el.Fd, true)
+	unix.SetNonblock(int(el.Fd), true)
 
 	// add the EventLine fd to the epoll instance
 	var epEvent unix.EpollEvent
 	epEvent.Events = unix.EPOLLIN | unix.EPOLLET
 	epEvent.Fd = int32(el.Fd)
-	if err := unix.EpollCtl(elw.epfd, unix.EPOLL_CTL_ADD, el.Fd, &epEvent); err != nil {
+	if err := unix.EpollCtl(elw.epfd, unix.EPOLL_CTL_ADD, int(el.Fd), &epEvent); err != nil {
 		return err
 	}
-	elw.efds = append(elw.efds, el.Fd)
+	elw.efds = append(elw.efds, int(el.Fd))
 
 	return nil
 }
