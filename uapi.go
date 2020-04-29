@@ -36,9 +36,9 @@ const (
 
 // ChipInfo contains informations about a GPIO chip.
 type ChipInfo struct {
-	Name  [32]byte
-	Label [32]byte
-	Lines uint32
+	name  [32]byte
+	label [32]byte
+	lines uint32
 }
 
 // Informational flags

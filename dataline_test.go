@@ -13,7 +13,7 @@ import (
 )
 
 func TestOutputDataLine(t *testing.T) {
-	chip, err := chardevgpio.Open(gpioDevicePath)
+	chip, err := chardevgpio.NewChip(gpioDevicePath)
 	if err != nil {
 		t.Fatalf("Unable to open gpio device '%s', err='%s'", gpioDevicePath, err)
 	}
@@ -27,7 +27,7 @@ func TestOutputDataLine(t *testing.T) {
 }
 
 func TestInputDataLine(t *testing.T) {
-	chip, err := chardevgpio.Open(gpioDevicePath)
+	chip, err := chardevgpio.NewChip(gpioDevicePath)
 	if err != nil {
 		t.Fatalf("Unable to open gpio device '%s', err='%s'", gpioDevicePath, err)
 	}
@@ -41,7 +41,7 @@ func TestInputDataLine(t *testing.T) {
 }
 
 func TestEventLine(t *testing.T) {
-	chip, err := chardevgpio.Open(gpioDevicePath)
+	chip, err := chardevgpio.NewChip(gpioDevicePath)
 	if err != nil {
 		t.Fatalf("Unable to open gpio device '%s', err='%s'", gpioDevicePath, err)
 	}

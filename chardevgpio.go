@@ -3,10 +3,11 @@
 
 // +build linux
 
-// Package chardevgpio is a low-level library to the Linux GPIO Character device API.
+// Package chardevgpio is a library to the Linux GPIO Character device API.
 package chardevgpio
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"syscall"
@@ -18,39 +19,97 @@ import (
 // Chip is a GPIO chip controlling a set of lines.
 type Chip struct {
 	ChipInfo
-	Fd uintptr
+	fd uintptr
 }
 
-// Open returns a new Chip for a GPIO character device from its path.
-func Open(path string) (Chip, error) {
+// NewChip returns a Chip for a GPIO character device from its path.
+func NewChip(path string) (Chip, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return Chip{}, err
 	}
 
 	var c Chip
-	c.Fd = f.Fd()
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, gpioGetChipInfoIOCTL, uintptr(unsafe.Pointer(&c.ChipInfo)))
+	c.fd = f.Fd()
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetChipInfoIOCTL, uintptr(unsafe.Pointer(&c.ChipInfo)))
 	if errno != 0 {
 		return c, errno
 	}
 	return c, nil
 }
 
+// Name returns the name of the Chip.
+func (c Chip) Name() string {
+	n := bytes.IndexByte(c.name[:], 0)
+	if n == -1 {
+		return string(c.name[:])
+	}
+	return string(c.name[:n])
+}
+
+// Label returns the label of the Chip.
+func (c Chip) Label() string {
+	n := bytes.IndexByte(c.label[:], 0)
+	if n == -1 {
+		return string(c.label[:])
+	}
+	return string(c.label[:n])
+}
+
+// Lines returns the number of lines managed by the Chip.
+func (c Chip) Lines() int {
+	return int(c.lines)
+}
+
 // Close releases resources helded by the Chip.
 func (c Chip) Close() error {
-	return syscall.Close(int(c.Fd))
+	return syscall.Close(int(c.fd))
 }
 
 // LineInfo returns informations about the requested line.
 func (c Chip) LineInfo(line int) (LineInfo, error) {
 	var li LineInfo
 	li.Offset = uint32(line)
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, gpioGetLineInfoIOCTL, uintptr(unsafe.Pointer(&li)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineInfoIOCTL, uintptr(unsafe.Pointer(&li)))
 	if errno != 0 {
 		return li, errno
 	}
 	return li, nil
+}
+
+// IsOutput returns true if the line is configured as an output.
+func (li LineInfo) IsOutput() bool {
+	return li.Flags&gpioLineFlagIsOut == gpioLineFlagIsOut
+}
+
+// IsInput returns true if the line is configured as an input.
+func (li LineInfo) IsInput() bool {
+	return !li.IsOutput()
+}
+
+// IsActiveLow returns true if the line is configured as active low.
+func (li LineInfo) IsActiveLow() bool {
+	return li.Flags&gpioLineFlagActiveLow == gpioLineFlagActiveLow
+}
+
+// IsActiveHigh returns true if the line is configured as active high.
+func (li LineInfo) IsActiveHigh() bool {
+	return !(li.IsActiveLow())
+}
+
+// IsOpenDrain returns true if the line is configured as open drain.
+func (li LineInfo) IsOpenDrain() bool {
+	return li.Flags&gpioLineFlagOpenDrain == gpioLineFlagOpenDrain
+}
+
+// IsOpenSource returns true if the line is configured as open source.
+func (li LineInfo) IsOpenSource() bool {
+	return li.Flags&gpioLineFlagOpenSource == gpioLineFlagOpenSource
+}
+
+// IsKernel returns true if the line is configured as kernel.
+func (li LineInfo) IsKernel() bool {
+	return li.Flags&gpioLineFlagKernel == gpioLineFlagKernel
 }
 
 // RequestOutputLine requests to the chip a single DataLine to send data.
@@ -62,7 +121,7 @@ func (c Chip) RequestOutputLine(line int, value int, consumer string) (DataLine,
 	l.Lines = 1
 	l.Consumer = consumerFromString(consumer)
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&l)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&l)))
 	if errno != 0 {
 		return l, errno
 	}
@@ -77,7 +136,7 @@ func (c Chip) RequestInputLine(line int, consumer string) (DataLine, error) {
 	l.Lines = 1
 	l.Consumer = consumerFromString(consumer)
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&l)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&l)))
 	if errno != 0 {
 		return l, errno
 	}
@@ -102,7 +161,7 @@ func (c Chip) RequestOutputLines(lines []int, values []int, consumer string) (Da
 	}
 	L.Consumer = consumerFromString(consumer)
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&L)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&L)))
 	if errno != 0 {
 		return L, errno
 	}
@@ -123,7 +182,7 @@ func (c Chip) RequestInputLines(lines []int, consumer string) (DataLines, error)
 	}
 	L.Consumer = consumerFromString(consumer)
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.Fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&L)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&L)))
 	if errno != 0 {
 		return L, errno
 	}
