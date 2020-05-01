@@ -65,3 +65,13 @@ func TestLineInfo(t *testing.T) {
 		}
 	}
 }
+
+func TestRequestLine(t *testing.T) {
+	c := newChip(t)
+	defer c.Close()
+
+	lines := gpio.NewHandleRequest([]int{0}, gpio.HandleRequestOutput)
+	if err := c.RequestLines(lines); err != nil {
+		t.Errorf("Unable to get line 0 for output, err='%s'", err)
+	}
+}

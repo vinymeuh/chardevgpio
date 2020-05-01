@@ -61,36 +61,39 @@ type LineInfo struct {
 	consumer [32]byte
 }
 
-// gpioHandlesMax limits maximum number of handles that can be requested in a GPIOHandleRequest
-const gpioHandlesMax = 64
+// handlesMax limits maximum number of handles that can be requested in a GPIOHandleRequest
+const handlesMax = 64
 
-// DataLine request flags.
+type HandleRequestFlag uint32
+
+// HandleRequest request flags.
 const (
-	gpioHandleRequestInput        = 1 << 0
-	gpioHandleRequestOutput       = 1 << 1
-	gpioHandleRequestActiveLow    = 1 << 2
-	gpioHandleRequestOpenDrain    = 1 << 3
-	gpioHandleRequestOpenSource   = 1 << 4
-	gpioHandleRequestBiasPullUp   = 1 << 5
-	gpioHandleRequestBiasPullDown = 1 << 6
-	gpioHandleRequestBiasDisable  = 1 << 7
+	HandleRequestInput        HandleRequestFlag = 1 << 0
+	HandleRequestOutput                         = 1 << 1
+	HandleRequestActiveLow                      = 1 << 2
+	HandleRequestOpenDrain                      = 1 << 3
+	HandleRequestOpenSource                     = 1 << 4
+	HandleRequestBiasPullUp                     = 1 << 5
+	HandleRequestBiasPullDown                   = 1 << 6
+	HandleRequestBiasDisable                    = 1 << 7
 )
 
-// DataLine represents a single line to be used to send or receive data.
-type DataLine struct {
-	LineOffsets   [gpioHandlesMax]uint32
-	Flags         uint32
-	DefaultValues [gpioHandlesMax]uint8
+// HandleRequest represents at first a query to be sent to a chip to get control on a set of lines.
+// After be returned by the chip, it must be used to send or received data to lines.
+type HandleRequest struct {
+	LineOffsets   [handlesMax]uint32
+	Flags         HandleRequestFlag
+	DefaultValues [handlesMax]uint8
 	Consumer      [32]byte
 	Lines         uint32
-	Fd            int32 // C int is 32 bits even on x86_64
+	fd            int32 // C int is 32 bits even on x86_64
 }
 
-// DataLineConfig is the structure to configure a DataLine.
-type DataLineConfig struct {
-	Flags         uint32
-	DefaultValues [gpioHandlesMax]uint8
-	Padding       [4]uint32 /* padding for future use */
+// HandleConfig is the structure to reconfigure an existing HandleRequest (not used, require Kernel 5.5 or later).
+type HandleConfig struct {
+	Flags        uint32
+	DfaultValues [handlesMax]uint8
+	Padding      [4]uint32 /* padding for future use */
 }
 
 // Data is the structure holding values for a DataLine.
@@ -98,7 +101,7 @@ type DataLineConfig struct {
 // When getting the state of lines this contains the current state of a line.
 // When setting the state of lines these should contain the desired target state.
 type Data struct {
-	Values [gpioHandlesMax]uint8
+	Values [handlesMax]uint8
 }
 
 const (
@@ -119,7 +122,7 @@ const (
 // EventLine represents a single line setup to receive GPIO events.
 type EventLine struct {
 	LineOffset  uint32
-	HandleFlags uint32
+	HandleFlags HandleRequestFlag
 	EventFlags  uint32
 	Consumer    [32]byte
 	Fd          int32 // C int is 32 bits even on x86_64
@@ -140,6 +143,6 @@ type Event struct {
 const (
 	gpioGetChipInfoIOCTL   = (iocRead << iocDirShift) | (0xB4 << iocTypeShift) | (0x01 << iocNRShift) | (unsafe.Sizeof(ChipInfo{}) << iocSizeShift)
 	gpioGetLineInfoIOCTL   = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x02 << iocNRShift) | (unsafe.Sizeof(LineInfo{}) << iocSizeShift)
-	gpioGetLineHandleIOCTL = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x03 << iocNRShift) | (unsafe.Sizeof(DataLine{}) << iocSizeShift)
+	gpioGetLineHandleIOCTL = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x03 << iocNRShift) | (unsafe.Sizeof(HandleRequest{}) << iocSizeShift)
 	gpioGetLineEventIOCTL  = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x04 << iocNRShift) | (unsafe.Sizeof(EventLine{}) << iocSizeShift)
 )

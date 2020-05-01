@@ -28,9 +28,9 @@ func NewEventLineWatcher() (EventLineWatcher, error) {
 // AddEvent adds a new event line to watch to the EventLineWatcher.
 func (elw *EventLineWatcher) AddEvent(chip Chip, line int, consumer string, eventType EventLineType) error {
 	el := EventLine{}
-	el.Consumer = consumerFromString(consumer)
+	el.Consumer = stringToBytes(consumer)
 	el.LineOffset = uint32(line)
-	el.HandleFlags = gpioHandleRequestInput
+	el.HandleFlags = HandleRequestInput
 	el.EventFlags = uint32(eventType)
 
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, chip.fd, gpioGetLineEventIOCTL, uintptr(unsafe.Pointer(&el)))
@@ -119,19 +119,6 @@ func (elw *EventLineWatcher) Close() error {
 		unix.Close(fd) // TODO: concatenate errors
 	}
 	return err
-}
-
-// helper that convert a string to an array of 32 bytes
-// Used to set GPIOHandleRequest.Consumer
-func consumerFromString(consumer string) [32]byte {
-	var b [32]byte
-	for i, c := range []byte(consumer) {
-		if i == 32 {
-			break
-		}
-		b[i] = c
-	}
-	return b
 }
 
 // helper that retrieves all event data that can be retrieved on a event line.

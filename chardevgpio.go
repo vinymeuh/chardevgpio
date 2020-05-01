@@ -40,20 +40,14 @@ func NewChip(path string) (Chip, error) {
 
 // Name returns the name of the chip.
 func (c Chip) Name() string {
-	n := bytes.IndexByte(c.name[:], 0)
-	if n == -1 {
-		return string(c.name[:])
-	}
-	return string(c.name[:n])
+	return bytesToString(c.name)
+
 }
 
 // Label returns the label of the chip.
 func (c Chip) Label() string {
-	n := bytes.IndexByte(c.label[:], 0)
-	if n == -1 {
-		return string(c.label[:])
-	}
-	return string(c.label[:n])
+	return bytesToString(c.label)
+
 }
 
 // Lines returns the number of lines managed by the chip.
@@ -84,20 +78,13 @@ func (li LineInfo) Offset() int {
 
 // Name returns the name of the line.
 func (li LineInfo) Name() string {
-	n := bytes.IndexByte(li.name[:], 0)
-	if n == -1 {
-		return string(li.name[:])
-	}
-	return string(li.name[:n])
+	return bytesToString(li.name)
 }
 
 // Consumer returns the consumer of the line.
 func (li LineInfo) Consumer() string {
-	n := bytes.IndexByte(li.consumer[:], 0)
-	if n == -1 {
-		return string(li.consumer[:])
-	}
-	return string(li.consumer[:n])
+	return bytesToString(li.consumer)
+
 }
 
 // IsOutput returns true if the line is configured as an output.
@@ -135,79 +122,106 @@ func (li LineInfo) IsKernel() bool {
 	return li.flags&lineFlagKernel == lineFlagKernel
 }
 
-// RequestOutputLine requests to the chip a single DataLine to send data.
-func (c Chip) RequestOutputLine(line int, value int, consumer string) (DataLine, error) {
-	l := DataLine{}
-	l.Flags = gpioHandleRequestOutput
-	l.LineOffsets[0] = uint32(line)
-	l.DefaultValues[0] = uint8(value)
-	l.Lines = 1
-	l.Consumer = consumerFromString(consumer)
+/*** WIP ***/
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&l)))
-	if errno != 0 {
-		return l, errno
+// NewHandleRequest prepare a HandleRequest
+func NewHandleRequest(offsets []int, flags HandleRequestFlag) *HandleRequest {
+	if len(offsets) > handlesMax {
+		panic(fmt.Sprintf("Number of requested lines exceeds maximum authorized (%d)", handlesMax))
 	}
-	return l, nil
+
+	hr := &HandleRequest{}
+	hr.Flags = flags
+
+	for i := range offsets {
+		hr.LineOffsets[i] = uint32(offsets[i])
+		hr.Lines++
+	}
+
+	return hr
 }
 
-// RequestInputLine requests to the chip a single DataLine to receive data.
-func (c Chip) RequestInputLine(line int, consumer string) (DataLine, error) {
-	l := DataLine{}
-	l.Flags = gpioHandleRequestInput
-	l.LineOffsets[0] = uint32(line)
-	l.Lines = 1
-	l.Consumer = consumerFromString(consumer)
-
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&l)))
-	if errno != 0 {
-		return l, errno
-	}
-	return l, nil
+// WithConsumer set the consumer for a prepared HandleRequest.
+func (hr *HandleRequest) WithConsumer(consumer string) *HandleRequest {
+	hr.Consumer = stringToBytes(consumer)
+	return hr
 }
 
-// RequestOutputLines requests to the chip a DataLines to receive data.
-func (c Chip) RequestOutputLines(lines []int, values []int, consumer string) (DataLines, error) {
-	L := DataLines{}
-	if len(lines) > gpioHandlesMax {
-		return L, fmt.Errorf("Number of requested lines exceeds maximum authorized (%d)", gpioHandlesMax)
-	}
-	if len(values) < len(lines) {
-		return L, fmt.Errorf("Not enough values to initialize lines")
+// WithDefaults set the default values for a prepared HandleRequest.
+func (hr *HandleRequest) WithDefaults(defaults []int) *HandleRequest {
+	if len(defaults) > handlesMax {
+		panic(fmt.Sprintf("Number of default values exceeds maximum authorized (%d)", handlesMax))
 	}
 
-	L.Flags = gpioHandleRequestOutput
-	for i := range lines {
-		L.LineOffsets[i] = uint32(lines[i])
-		L.DefaultValues[i] = uint8(values[i])
-		L.Lines++
+	for i := range defaults {
+		hr.DefaultValues[i] = uint8(defaults[i])
 	}
-	L.Consumer = consumerFromString(consumer)
-
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&L)))
-	if errno != 0 {
-		return L, errno
-	}
-	return L, nil
+	return hr
 }
 
-// RequestInputLines requests to the chip a DataLines to send data.
-func (c Chip) RequestInputLines(lines []int, consumer string) (DataLines, error) {
-	L := DataLines{}
-	if len(lines) > gpioHandlesMax {
-		return L, fmt.Errorf("Number of requested lines exceeds maximum authorized (%d)", gpioHandlesMax)
-	}
-
-	L.Flags = gpioHandleRequestInput
-	for i := range lines {
-		L.LineOffsets[i] = uint32(lines[i])
-		L.Lines++
-	}
-	L.Consumer = consumerFromString(consumer)
-
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(&L)))
+// RequestLines takes a prepared HandleRequest and returns it ready to work.
+func (c Chip) RequestLines(request *HandleRequest) error {
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(request)))
 	if errno != 0 {
-		return L, errno
+		return errno
 	}
-	return L, nil
+	return nil
+}
+
+// Write writes values to lines handled by the HandleRequest.
+func (hr *HandleRequest) Write(values []int) error {
+	out := Data{}
+	for i := range values {
+		if i > handlesMax-1 {
+			break
+		}
+		out.Values[i] = uint8(values[i])
+	}
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), gpioHandleSetLineValuesIOCTL, uintptr(unsafe.Pointer(&out)))
+	if errno != 0 {
+		return errno
+	}
+	return nil
+}
+
+// Write0 writes value to the first line handled by the HandleRequest.
+func (hr *HandleRequest) Write0(value int) error {
+	out := Data{}
+	out.Values[0] = uint8(value)
+
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), gpioHandleSetLineValuesIOCTL, uintptr(unsafe.Pointer(&out)))
+	if errno != 0 {
+		return errno
+	}
+	return nil
+}
+
+// Close releases resources helded by the HandleRequest.
+func (hr HandleRequest) Close() error {
+	return syscall.Close(int(hr.fd))
+}
+
+/*** WIP ***/
+
+// bytesToString is a helper function to convert raw string as stored in Linux structure to Go string.
+func bytesToString(B [32]byte) string {
+	n := bytes.IndexByte(B[:], 0)
+	if n == -1 {
+		return string(B[:])
+	}
+	return string(B[:n])
+}
+
+// stringToBytes is a helper function to convert Go string to string as stored in Linux structure.
+// Used to set GPIOHandleRequest.Consumer
+func stringToBytes(s string) [32]byte {
+	var b [32]byte
+	for i, c := range []byte(s) {
+		if i == 32 {
+			break
+		}
+		b[i] = c
+	}
+	return b
 }
