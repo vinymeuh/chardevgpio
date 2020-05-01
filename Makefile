@@ -19,11 +19,8 @@ coverage: ## Show test coverage
 	go tool cover -func=coverage.txt
 	go tool cover -html=coverage.txt
 
-test-prepare: ## Mount debugfs and load gpio-mockup kernel module (sudo)
-	modprobe gpio-mockup gpio_mockup_ranges=0,10 gpio_mockup_named_lines=1
-
 test: ## Run tests
-	go test -v -race -coverprofile=coverage.txt -covermode=atomic .
+	go test -race -coverprofile=coverage.txt -covermode=atomic .
 
 help: ## Show Help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
