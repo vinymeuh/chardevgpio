@@ -81,19 +81,19 @@ const (
 // HandleRequest represents at first a query to be sent to a chip to get control on a set of lines.
 // After be returned by the chip, it must be used to send or received data to lines.
 type HandleRequest struct {
-	LineOffsets   [handlesMax]uint32
-	Flags         HandleRequestFlag
-	DefaultValues [handlesMax]uint8
-	Consumer      [32]byte
-	Lines         uint32
+	lineOffsets   [handlesMax]uint32
+	flags         HandleRequestFlag
+	defaultValues [handlesMax]uint8
+	consumer      [32]byte
+	lines         uint32
 	fd            int32 // C int is 32 bits even on x86_64
 }
 
 // HandleConfig is the structure to reconfigure an existing HandleRequest (not used, require Kernel 5.5 or later).
 type HandleConfig struct {
-	Flags        uint32
-	DfaultValues [handlesMax]uint8
-	Padding      [4]uint32 /* padding for future use */
+	flags         uint32
+	defaultValues [handlesMax]uint8
+	padding       [4]uint32 /* padding for future use */
 }
 
 // Data is the structure holding values for a DataLine.

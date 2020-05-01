@@ -131,11 +131,11 @@ func NewHandleRequest(offsets []int, flags HandleRequestFlag) *HandleRequest {
 	}
 
 	hr := &HandleRequest{}
-	hr.Flags = flags
+	hr.flags = flags
 
 	for i := range offsets {
-		hr.LineOffsets[i] = uint32(offsets[i])
-		hr.Lines++
+		hr.lineOffsets[i] = uint32(offsets[i])
+		hr.lines++
 	}
 
 	return hr
@@ -143,7 +143,7 @@ func NewHandleRequest(offsets []int, flags HandleRequestFlag) *HandleRequest {
 
 // WithConsumer set the consumer for a prepared HandleRequest.
 func (hr *HandleRequest) WithConsumer(consumer string) *HandleRequest {
-	hr.Consumer = stringToBytes(consumer)
+	hr.consumer = stringToBytes(consumer)
 	return hr
 }
 
@@ -154,7 +154,7 @@ func (hr *HandleRequest) WithDefaults(defaults []int) *HandleRequest {
 	}
 
 	for i := range defaults {
-		hr.DefaultValues[i] = uint8(defaults[i])
+		hr.defaultValues[i] = uint8(defaults[i])
 	}
 	return hr
 }
