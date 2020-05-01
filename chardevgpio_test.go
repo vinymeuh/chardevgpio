@@ -19,6 +19,14 @@ const (
 	chipLines      = 10
 )
 
+func newChip(t *testing.T) gpio.Chip {
+	c, err := gpio.NewChip(gpioDevicePath)
+	if err != nil {
+		t.Fatalf("Unable to open gpio device '%s', err='%s'", gpioDevicePath, err)
+	}
+	return c
+}
+
 func TestChip(t *testing.T) {
 	c, err := gpio.NewChip(gpioDevicePath)
 	if err != nil {
@@ -37,18 +45,23 @@ func TestChip(t *testing.T) {
 		t.Errorf("Wrong value for Chip.Lines, expected=%d, got=%d", chipLines, c.Lines())
 	}
 
+	if err := c.Close(); err != nil {
+		t.Errorf("Error while closing the chip, err='%s'", err)
+	}
+}
+
+func TestLineInfo(t *testing.T) {
+	c := newChip(t)
+	defer c.Close()
+
 	for i := 0; i < c.Lines(); i++ {
 		li, err := c.LineInfo(i)
 		if err != nil {
 			t.Errorf("Unable to read LineInfo for line %d, err='%s'", i, err)
 		}
 		name := fmt.Sprintf("%s-%d", chipLabel, i)
-		if string(li.Name[:len(name)]) != name {
-			t.Errorf("Wrong value for LineInfo.Name, expected=%s, got=%s", name, li.Name)
+		if li.Name() != name {
+			t.Errorf("Wrong value for LineInfo.Name, expected=%s, got=%s", name, li.Name())
 		}
-	}
-
-	if err := c.Close(); err != nil {
-		t.Errorf("Error while closing the chip, err='%s'", err)
 	}
 }

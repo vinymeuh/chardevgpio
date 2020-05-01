@@ -38,7 +38,7 @@ func NewChip(path string) (Chip, error) {
 	return c, nil
 }
 
-// Name returns the name of the Chip.
+// Name returns the name of the chip.
 func (c Chip) Name() string {
 	n := bytes.IndexByte(c.name[:], 0)
 	if n == -1 {
@@ -47,7 +47,7 @@ func (c Chip) Name() string {
 	return string(c.name[:n])
 }
 
-// Label returns the label of the Chip.
+// Label returns the label of the chip.
 func (c Chip) Label() string {
 	n := bytes.IndexByte(c.label[:], 0)
 	if n == -1 {
@@ -56,20 +56,20 @@ func (c Chip) Label() string {
 	return string(c.label[:n])
 }
 
-// Lines returns the number of lines managed by the Chip.
+// Lines returns the number of lines managed by the chip.
 func (c Chip) Lines() int {
 	return int(c.lines)
 }
 
-// Close releases resources helded by the Chip.
+// Close releases resources helded by the chip.
 func (c Chip) Close() error {
 	return syscall.Close(int(c.fd))
 }
 
 // LineInfo returns informations about the requested line.
-func (c Chip) LineInfo(line int) (LineInfo, error) {
+func (c Chip) LineInfo(offset int) (LineInfo, error) {
 	var li LineInfo
-	li.Offset = uint32(line)
+	li.offset = uint32(offset)
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineInfoIOCTL, uintptr(unsafe.Pointer(&li)))
 	if errno != 0 {
 		return li, errno
@@ -77,9 +77,32 @@ func (c Chip) LineInfo(line int) (LineInfo, error) {
 	return li, nil
 }
 
+// Offset returns the offset number of the line.
+func (li LineInfo) Offset() int {
+	return int(li.offset)
+}
+
+// Name returns the name of the line.
+func (li LineInfo) Name() string {
+	n := bytes.IndexByte(li.name[:], 0)
+	if n == -1 {
+		return string(li.name[:])
+	}
+	return string(li.name[:n])
+}
+
+// Consumer returns the consumer of the line.
+func (li LineInfo) Consumer() string {
+	n := bytes.IndexByte(li.consumer[:], 0)
+	if n == -1 {
+		return string(li.consumer[:])
+	}
+	return string(li.consumer[:n])
+}
+
 // IsOutput returns true if the line is configured as an output.
 func (li LineInfo) IsOutput() bool {
-	return li.Flags&gpioLineFlagIsOut == gpioLineFlagIsOut
+	return li.flags&lineFlagIsOut == lineFlagIsOut
 }
 
 // IsInput returns true if the line is configured as an input.
@@ -89,7 +112,7 @@ func (li LineInfo) IsInput() bool {
 
 // IsActiveLow returns true if the line is configured as active low.
 func (li LineInfo) IsActiveLow() bool {
-	return li.Flags&gpioLineFlagActiveLow == gpioLineFlagActiveLow
+	return li.flags&lineFlagActiveLow == lineFlagActiveLow
 }
 
 // IsActiveHigh returns true if the line is configured as active high.
@@ -99,17 +122,17 @@ func (li LineInfo) IsActiveHigh() bool {
 
 // IsOpenDrain returns true if the line is configured as open drain.
 func (li LineInfo) IsOpenDrain() bool {
-	return li.Flags&gpioLineFlagOpenDrain == gpioLineFlagOpenDrain
+	return li.flags&lineFlagOpenDrain == lineFlagOpenDrain
 }
 
 // IsOpenSource returns true if the line is configured as open source.
 func (li LineInfo) IsOpenSource() bool {
-	return li.Flags&gpioLineFlagOpenSource == gpioLineFlagOpenSource
+	return li.flags&lineFlagOpenSource == lineFlagOpenSource
 }
 
 // IsKernel returns true if the line is configured as kernel.
 func (li LineInfo) IsKernel() bool {
-	return li.Flags&gpioLineFlagKernel == gpioLineFlagKernel
+	return li.flags&lineFlagKernel == lineFlagKernel
 }
 
 // RequestOutputLine requests to the chip a single DataLine to send data.

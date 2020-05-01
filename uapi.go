@@ -43,22 +43,22 @@ type ChipInfo struct {
 
 // Informational flags
 const (
-	gpioLineFlagKernel       = 1 << 0
-	gpioLineFlagIsOut        = 1 << 1
-	gpioLineFlagActiveLow    = 1 << 2
-	gpioLineFlagOpenDrain    = 1 << 3
-	gpioLineFlagOpenSource   = 1 << 4
-	gpioLineFlagBiasPullUp   = 1 << 5
-	gpioLineFlagBiasPullDown = 1 << 6
-	gpioLineFlagDisable      = 1 << 7
+	lineFlagKernel       = 1 << 0
+	lineFlagIsOut        = 1 << 1
+	lineFlagActiveLow    = 1 << 2
+	lineFlagOpenDrain    = 1 << 3
+	lineFlagOpenSource   = 1 << 4
+	lineFlagBiasPullUp   = 1 << 5
+	lineFlagBiasPullDown = 1 << 6
+	lineFlagDisable      = 1 << 7
 )
 
 // LineInfo contains informations about a GPIO line.
 type LineInfo struct {
-	Offset   uint32
-	Flags    uint32
-	Name     [32]byte
-	Consumer [32]byte
+	offset   uint32
+	flags    uint32
+	name     [32]byte
+	consumer [32]byte
 }
 
 // gpioHandlesMax limits maximum number of handles that can be requested in a GPIOHandleRequest

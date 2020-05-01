@@ -1,7 +1,4 @@
 .DS_Store
 
+build/*
 coverage.*
-
-cmd/ioctl-list-gpio/ioctl-list-gpio
-cmd/ioctl-toggle-gpio/ioctl-toggle-gpio
-cmd/ioctl-epoll-gpio/ioctl-epoll-gpio

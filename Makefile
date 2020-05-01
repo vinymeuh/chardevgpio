@@ -1,10 +1,15 @@
 .DEFAULT_GOAL := help
+.PHONY: build
 
 GOFLAGS := -trimpath
+GOBUILDFLASG := ${GOFLAGS} -o ../../build
 SUBDIRS := $(wildcard cmd/*/.)
 
-build: ## Build
-	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux go build ${GOFLAGS}))
+builddir:
+	@mkdir build
+
+build: ## Build for current architecture
+	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux go build ${GOBUILDFLASG}))
 	@:
 
 build-arm6: ## Build for ARM6
