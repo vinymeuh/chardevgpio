@@ -1,8 +1,6 @@
 // Copyright 2020 VinyMeuh. All rights reserved.
 // Use of the source code is governed by a MIT-style license that can be found in the LICENSE file.
 
-// Inspired of https://framagit.org/cpb/ioctl-access-to-gpio/blob/master/ioctl-gpio-list.c from Christophe Blaess.
-
 package main
 
 import (

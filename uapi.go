@@ -64,6 +64,7 @@ type LineInfo struct {
 // handlesMax limits maximum number of handles that can be requested in a GPIOHandleRequest
 const handlesMax = 64
 
+// HandleRequestFlag is the type of request flags.
 type HandleRequestFlag uint32
 
 // HandleRequest request flags.
@@ -89,24 +90,24 @@ type HandleRequest struct {
 	fd            int32 // C int is 32 bits even on x86_64
 }
 
-// HandleConfig is the structure to reconfigure an existing HandleRequest (not used, require Kernel 5.5 or later).
+// HandleConfig is the structure to reconfigure an existing HandleRequest (not used currently, require Kernel 5.5 or later).
 type HandleConfig struct {
 	flags         uint32
 	defaultValues [handlesMax]uint8
 	padding       [4]uint32 /* padding for future use */
 }
 
-// Data is the structure holding values for a DataLine.
+// handleData is the structure holding values for a DataLine.
 //
 // When getting the state of lines this contains the current state of a line.
 // When setting the state of lines these should contain the desired target state.
-type Data struct {
-	Values [handlesMax]uint8
+type handleData struct {
+	values [handlesMax]uint8
 }
 
 const (
-	ioctlHandleGetLineValues = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x08 << iocNRShift) | (unsafe.Sizeof(Data{}) << iocSizeShift)
-	ioctlHandleSetLineValues = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x09 << iocNRShift) | (unsafe.Sizeof(Data{}) << iocSizeShift)
+	ioctlHandleGetLineValues = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x08 << iocNRShift) | (unsafe.Sizeof(handleData{}) << iocSizeShift)
+	ioctlHandleSetLineValues = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x09 << iocNRShift) | (unsafe.Sizeof(handleData{}) << iocSizeShift)
 )
 
 // EventLineType defines the kind of event to wait on an event line.

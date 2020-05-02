@@ -119,8 +119,6 @@ func (li LineInfo) IsKernel() bool {
 	return li.flags&lineFlagKernel == lineFlagKernel
 }
 
-/*** WIP ***/
-
 // NewHandleRequest prepare a HandleRequest
 func NewHandleRequest(offsets []int, flags HandleRequestFlag) *HandleRequest {
 	if len(offsets) > handlesMax {
@@ -169,19 +167,19 @@ func (c Chip) RequestLines(request *HandleRequest) error {
 // The second return parameter contains all values returned as an array.
 // The first one is the first element of this array, useful when dealing with 1 line HandleRequest.
 func (hr *HandleRequest) Read() (int, []int, error) {
-	in := Data{}
+	in := handleData{}
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), ioctlHandleGetLineValues, uintptr(unsafe.Pointer(&in)))
 	if errno != 0 {
 		return 0, []int{}, errno
 	}
 
-	switch len(in.Values) {
+	switch len(in.values) {
 	case 1:
-		return int(in.Values[0]), []int{int(in.Values[0])}, nil
+		return int(in.values[0]), []int{int(in.values[0])}, nil
 	default:
-		valueN := make([]int, len(in.Values))
-		for i := range in.Values {
-			valueN[i] = int(in.Values[i])
+		valueN := make([]int, len(in.values))
+		for i := range in.values {
+			valueN[i] = int(in.values[i])
 		}
 		return valueN[0], valueN, nil
 	}
@@ -190,13 +188,13 @@ func (hr *HandleRequest) Read() (int, []int, error) {
 // Write writes values to the lines handled by the HandleRequest.
 // If there is more values ​​supplied than lines managed by the HandleRequest, excess values ​​are silently ignored.
 func (hr *HandleRequest) Write(value0 int, valueN ...int) error {
-	out := Data{}
-	out.Values[0] = uint8(value0)
+	out := handleData{}
+	out.values[0] = uint8(value0)
 	for i := range valueN {
 		if i >= int(hr.lines)-1 {
 			break
 		}
-		out.Values[i+1] = uint8(valueN[i])
+		out.values[i+1] = uint8(valueN[i])
 	}
 
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), ioctlHandleSetLineValues, uintptr(unsafe.Pointer(&out)))
@@ -210,8 +208,6 @@ func (hr *HandleRequest) Write(value0 int, valueN ...int) error {
 func (hr HandleRequest) Close() error {
 	return syscall.Close(int(hr.fd))
 }
-
-/*** WIP ***/
 
 // bytesToString is a helper function to convert raw string as stored in Linux structure to Go string.
 func bytesToString(B [32]byte) string {
