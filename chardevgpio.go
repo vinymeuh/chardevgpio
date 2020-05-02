@@ -41,13 +41,11 @@ func NewChip(path string) (Chip, error) {
 // Name returns the name of the chip.
 func (c Chip) Name() string {
 	return bytesToString(c.name)
-
 }
 
 // Label returns the label of the chip.
 func (c Chip) Label() string {
 	return bytesToString(c.label)
-
 }
 
 // Lines returns the number of lines managed by the chip.
@@ -84,7 +82,6 @@ func (li LineInfo) Name() string {
 // Consumer returns the consumer of the line.
 func (li LineInfo) Consumer() string {
 	return bytesToString(li.consumer)
-
 }
 
 // IsOutput returns true if the line is configured as an output.
@@ -168,27 +165,17 @@ func (c Chip) RequestLines(request *HandleRequest) error {
 	return nil
 }
 
-// Write writes values to lines handled by the HandleRequest.
-func (hr *HandleRequest) Write(values []int) error {
+// Write writes values to the lines handled by the HandleRequest.
+// If there is more values ​​supplied than lines managed by the HandleRequest, excess values ​​are silently ignored.
+func (hr *HandleRequest) Write(value0 int, valueN ...int) error {
 	out := Data{}
-	for i := range values {
-		if i > handlesMax-1 {
+	out.Values[0] = uint8(value0)
+	for i := range valueN {
+		if i >= int(hr.lines)-1 {
 			break
 		}
-		out.Values[i] = uint8(values[i])
+		out.Values[i+1] = uint8(valueN[i])
 	}
-
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), gpioHandleSetLineValuesIOCTL, uintptr(unsafe.Pointer(&out)))
-	if errno != 0 {
-		return errno
-	}
-	return nil
-}
-
-// Write0 writes value to the first line handled by the HandleRequest.
-func (hr *HandleRequest) Write0(value int) error {
-	out := Data{}
-	out.Values[0] = uint8(value)
 
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), gpioHandleSetLineValuesIOCTL, uintptr(unsafe.Pointer(&out)))
 	if errno != 0 {

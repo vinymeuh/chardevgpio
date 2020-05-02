@@ -14,15 +14,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/vinymeuh/chardevgpio"
+	gpio "github.com/vinymeuh/chardevgpio"
 )
 
-func printEventData(evd chardevgpio.Event) {
+func printEventData(evd gpio.Event) {
 	fmt.Printf("[%d.%09d]", evd.Timestamp/1000000000, evd.Timestamp%1000000000)
-	if evd.ID&chardevgpio.EventRisingEdge == chardevgpio.EventRisingEdge {
+	if evd.ID&gpio.EventRisingEdge == gpio.EventRisingEdge {
 		fmt.Fprintln(os.Stdout, " RISING")
 	}
-	if evd.ID&chardevgpio.EventFallingEdge == chardevgpio.EventFallingEdge {
+	if evd.ID&gpio.EventFallingEdge == gpio.EventFallingEdge {
 		fmt.Fprintln(os.Stdout, " FALLING")
 	}
 }
@@ -33,7 +33,7 @@ func main() {
 	flag.Parse()
 
 	// Open the chip
-	chip, err := chardevgpio.Open(*devicePath)
+	chip, err := gpio.NewChip(*devicePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "chardevgpio.Open: %s\n", err)
 		os.Exit(1)
@@ -41,14 +41,14 @@ func main() {
 	defer chip.Close()
 
 	// Create the EventLineWatcher
-	watcher, err := chardevgpio.NewEventLineWatcher()
+	watcher, err := gpio.NewEventLineWatcher()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "chardevgpio.NewEventLineWatcher: %s\n", err)
 		os.Exit(1)
 	}
 	defer watcher.Close()
 
-	if err := watcher.AddEvent(chip, *lineOffset, filepath.Base(os.Args[0]), chardevgpio.BothEdges); err != nil {
+	if err := watcher.AddEvent(chip, *lineOffset, filepath.Base(os.Args[0]), gpio.BothEdges); err != nil {
 		fmt.Fprintf(os.Stderr, "watcher.AddEvent: %s\n", err)
 		os.Exit(1)
 	}

@@ -26,14 +26,14 @@ func main() {
 	}
 	defer chip.Close()
 
-	line := gpio.NewHandleRequest([]int{*offset}, gpio.HandleRequestInput)
+	line := gpio.NewHandleRequest([]int{*offset}, gpio.HandleRequestInput).WithConsumer("gpio-set")
 	if err := chip.RequestLines(line); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	defer line.Close()
 
-	if err := line.Write0(*value); err != nil {
+	if err := line.Write(*value); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

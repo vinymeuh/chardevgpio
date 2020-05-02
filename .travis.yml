@@ -4,8 +4,7 @@ go:
   - 1.14.x
 
 script:
-  - go test -v .
-  - bash cmd/build.sh
+  - make build
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
