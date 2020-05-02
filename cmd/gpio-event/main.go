@@ -1,11 +1,6 @@
 // Copyright 2020 VinyMeuh. All rights reserved.
 // Use of the source code is governed by a MIT-style license that can be found in the LICENSE file.
 
-// Inspired of https://framagit.org/cpb/ioctl-access-to-gpio/blob/master/ioctl-poll-gpio.c from Christophe Blaess.
-// C version: https://gist.github.com/vinymeuh/c892df73407d0b336c879a7c87be0db7
-//
-// GOOS=linux GOARCH=arm GOARM=7 go build
-
 package main
 
 import (
@@ -40,15 +35,15 @@ func main() {
 	}
 	defer chip.Close()
 
-	// Create the EventLineWatcher
-	watcher, err := gpio.NewEventLineWatcher()
+	// Create the LineWatcher
+	watcher, err := gpio.NewLineWatcher()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "chardevgpio.NewEventLineWatcher: %s\n", err)
 		os.Exit(1)
 	}
 	defer watcher.Close()
 
-	if err := watcher.AddEvent(chip, *lineOffset, filepath.Base(os.Args[0]), gpio.BothEdges); err != nil {
+	if err := watcher.Add(chip, *lineOffset, gpio.BothEdges, filepath.Base(os.Args[0])); err != nil {
 		fmt.Fprintf(os.Stderr, "watcher.AddEvent: %s\n", err)
 		os.Exit(1)
 	}

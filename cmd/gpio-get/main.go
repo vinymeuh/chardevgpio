@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	gpio "github.com/vinymeuh/chardevgpio"
 )
@@ -23,7 +24,7 @@ func main() {
 	}
 	defer chip.Close()
 
-	line := gpio.NewHandleRequest([]int{*offset}, gpio.HandleRequestInput).WithConsumer("gpio-get")
+	line := gpio.NewHandleRequest([]int{*offset}, gpio.HandleRequestInput).WithConsumer(filepath.Base(os.Args[0]))
 	if err := chip.RequestLines(line); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

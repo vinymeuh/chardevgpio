@@ -75,3 +75,21 @@ func TestRequestLine(t *testing.T) {
 		t.Errorf("Unable to get line 0 for output, err='%s'", err)
 	}
 }
+
+func TestEventLine(t *testing.T) {
+	c := newChip(t)
+	defer c.Close()
+
+	watcher, err := gpio.NewLineWatcher()
+	if err != nil {
+		t.Errorf("Unable to create LineWatcher, err='%s'", err)
+	}
+
+	if err := watcher.Add(c, 1, gpio.BothEdges, ""); err != nil {
+		t.Errorf("Error while adding event to the LineWatcher, err='%s'", err)
+	}
+
+	if err := watcher.Close(); err != nil {
+		t.Errorf("Error while closing LineWatcher, err='%s'", err)
+	}
+}

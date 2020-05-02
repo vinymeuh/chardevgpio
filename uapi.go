@@ -110,23 +110,23 @@ const (
 	ioctlHandleSetLineValues = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x09 << iocNRShift) | (unsafe.Sizeof(handleData{}) << iocSizeShift)
 )
 
-// EventLineType defines the kind of event to wait on an event line.
-type EventLineType uint32
+// EventRequestFlags defines the kind of event to wait on a line.
+type EventRequestFlags uint32
 
 // EventLine request flags.
 const (
-	RisingEdge  EventLineType = 1 << 0
-	FallingEdge               = 1 << 1
-	BothEdges                 = (1 << 0) | (1 << 1)
+	RisingEdge  EventRequestFlags = 1 << 0
+	FallingEdge                   = 1 << 1
+	BothEdges                     = (1 << 0) | (1 << 1)
 )
 
 // EventLine represents a single line setup to receive GPIO events.
 type EventLine struct {
-	LineOffset  uint32
-	HandleFlags HandleRequestFlag
-	EventFlags  uint32
-	Consumer    [32]byte
-	Fd          int32 // C int is 32 bits even on x86_64
+	lineOffset  uint32
+	handleFlags HandleRequestFlag
+	eventFlags  uint32
+	consumer    [32]byte
+	fd          int32 // C int is 32 bits even on x86_64
 }
 
 // Event types
