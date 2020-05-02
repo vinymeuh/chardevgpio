@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	gpio "github.com/vinymeuh/chardevgpio"
 )
@@ -15,8 +14,6 @@ import (
 func main() {
 	path := flag.String("device", "/dev/gpiochip0", "GPIO device path")
 	offset := flag.Int("line", 22, "line number")
-	value := flag.Int("value", 1, "value to write (0/1)")
-	seconds := flag.Int("time", 60, "write hold time (seconds)")
 	flag.Parse()
 
 	chip, err := gpio.NewChip(*path)
@@ -26,16 +23,17 @@ func main() {
 	}
 	defer chip.Close()
 
-	line := gpio.NewHandleRequest([]int{*offset}, gpio.HandleRequestOutput).WithConsumer("gpio-set")
+	line := gpio.NewHandleRequest([]int{*offset}, gpio.HandleRequestInput).WithConsumer("gpio-get")
 	if err := chip.RequestLines(line); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	defer line.Close()
 
-	if err := line.Write(*value); err != nil {
+	value, _, err := line.Read()
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	time.Sleep(time.Duration(*seconds) * time.Second)
+	fmt.Println(value)
 }

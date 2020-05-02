@@ -33,7 +33,7 @@ func (elw *EventLineWatcher) AddEvent(chip Chip, line int, consumer string, even
 	el.HandleFlags = HandleRequestInput
 	el.EventFlags = uint32(eventType)
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, chip.fd, gpioGetLineEventIOCTL, uintptr(unsafe.Pointer(&el)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, chip.fd, ioctlGetLineEvent, uintptr(unsafe.Pointer(&el)))
 	if errno != 0 {
 		return errno
 	}

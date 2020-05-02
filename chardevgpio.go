@@ -31,7 +31,7 @@ func NewChip(path string) (Chip, error) {
 
 	var c Chip
 	c.fd = f.Fd()
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetChipInfoIOCTL, uintptr(unsafe.Pointer(&c.ChipInfo)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, ioctlGetChipInfo, uintptr(unsafe.Pointer(&c.ChipInfo)))
 	if errno != 0 {
 		return c, errno
 	}
@@ -62,7 +62,7 @@ func (c Chip) Close() error {
 func (c Chip) LineInfo(offset int) (LineInfo, error) {
 	var li LineInfo
 	li.offset = uint32(offset)
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineInfoIOCTL, uintptr(unsafe.Pointer(&li)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, ioctlGetLineInfo, uintptr(unsafe.Pointer(&li)))
 	if errno != 0 {
 		return li, errno
 	}
@@ -158,11 +158,33 @@ func (hr *HandleRequest) WithDefaults(defaults []int) *HandleRequest {
 
 // RequestLines takes a prepared HandleRequest and returns it ready to work.
 func (c Chip) RequestLines(request *HandleRequest) error {
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, gpioGetLineHandleIOCTL, uintptr(unsafe.Pointer(request)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, c.fd, ioctlGetLineHandle, uintptr(unsafe.Pointer(request)))
 	if errno != 0 {
 		return errno
 	}
 	return nil
+}
+
+// Reads return values read from the lines handled by the HandleRequest.
+// The second return parameter contains all values returned as an array.
+// The first one is the first element of this array, useful when dealing with 1 line HandleRequest.
+func (hr *HandleRequest) Read() (int, []int, error) {
+	in := Data{}
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), ioctlHandleGetLineValues, uintptr(unsafe.Pointer(&in)))
+	if errno != 0 {
+		return 0, []int{}, errno
+	}
+
+	switch len(in.Values) {
+	case 1:
+		return int(in.Values[0]), []int{int(in.Values[0])}, nil
+	default:
+		valueN := make([]int, len(in.Values))
+		for i := range in.Values {
+			valueN[i] = int(in.Values[i])
+		}
+		return valueN[0], valueN, nil
+	}
 }
 
 // Write writes values to the lines handled by the HandleRequest.
@@ -177,7 +199,7 @@ func (hr *HandleRequest) Write(value0 int, valueN ...int) error {
 		out.Values[i+1] = uint8(valueN[i])
 	}
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), gpioHandleSetLineValuesIOCTL, uintptr(unsafe.Pointer(&out)))
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), ioctlHandleSetLineValues, uintptr(unsafe.Pointer(&out)))
 	if errno != 0 {
 		return errno
 	}

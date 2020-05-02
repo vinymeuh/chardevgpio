@@ -105,8 +105,8 @@ type Data struct {
 }
 
 const (
-	gpioHandleGetLineValuesIOCTL = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x08 << iocNRShift) | (unsafe.Sizeof(Data{}) << iocSizeShift)
-	gpioHandleSetLineValuesIOCTL = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x09 << iocNRShift) | (unsafe.Sizeof(Data{}) << iocSizeShift)
+	ioctlHandleGetLineValues = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x08 << iocNRShift) | (unsafe.Sizeof(Data{}) << iocSizeShift)
+	ioctlHandleSetLineValues = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x09 << iocNRShift) | (unsafe.Sizeof(Data{}) << iocSizeShift)
 )
 
 // EventLineType defines the kind of event to wait on an event line.
@@ -141,8 +141,8 @@ type Event struct {
 }
 
 const (
-	gpioGetChipInfoIOCTL   = (iocRead << iocDirShift) | (0xB4 << iocTypeShift) | (0x01 << iocNRShift) | (unsafe.Sizeof(ChipInfo{}) << iocSizeShift)
-	gpioGetLineInfoIOCTL   = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x02 << iocNRShift) | (unsafe.Sizeof(LineInfo{}) << iocSizeShift)
-	gpioGetLineHandleIOCTL = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x03 << iocNRShift) | (unsafe.Sizeof(HandleRequest{}) << iocSizeShift)
-	gpioGetLineEventIOCTL  = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x04 << iocNRShift) | (unsafe.Sizeof(EventLine{}) << iocSizeShift)
+	ioctlGetChipInfo   = (iocRead << iocDirShift) | (0xB4 << iocTypeShift) | (0x01 << iocNRShift) | (unsafe.Sizeof(ChipInfo{}) << iocSizeShift)
+	ioctlGetLineInfo   = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x02 << iocNRShift) | (unsafe.Sizeof(LineInfo{}) << iocSizeShift)
+	ioctlGetLineHandle = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x03 << iocNRShift) | (unsafe.Sizeof(HandleRequest{}) << iocSizeShift)
+	ioctlGetLineEvent  = ((iocRead | iocWrite) << iocDirShift) | (0xB4 << iocTypeShift) | (0x04 << iocNRShift) | (unsafe.Sizeof(EventLine{}) << iocSizeShift)
 )
