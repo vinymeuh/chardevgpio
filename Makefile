@@ -2,22 +2,23 @@
 .PHONY: build
 
 GOFLAGS := -trimpath
-GOBUILDFLASG := ${GOFLAGS} -o ../../build
+GOBUILDFLAGS := ${GOFLAGS} -o ../../build
 SUBDIRS := $(wildcard cmd/*/.)
 
 builddir:
+	@rm -rf build
 	@mkdir build
 
-build: ## Build for current architecture
-	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux go build ${GOBUILDFLASG}))
+build: builddir ## Build for current architecture
+	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux go build ${GOBUILDFLAGS}))
 	@:
 
-build-arm6: ## Build for ARM6
-	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux GOARCH=arm GOARM=6 go build ${GOFLAGS}))
+build-arm6: builddir ## Build for ARM6
+	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux GOARCH=arm GOARM=6 go build ${GOBUILDFLAGS}))
 	@:
 
-build-arm7: ## Build for ARM7
-	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux GOARCH=arm GOARM=7 go build ${GOFLAGS}))
+build-arm7: builddir ## Build for ARM7
+	$(foreach cmd, $(SUBDIRS), $(shell cd $(cmd) && GOOS=linux GOARCH=arm GOARM=7 go build ${GOBUILDFLAGS}))
 	@:
 
 coverage: ## Show test coverage
