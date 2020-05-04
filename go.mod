@@ -2,4 +2,4 @@ module github.com/vinymeuh/chardevgpio
 
 go 1.14
 
-require golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527
+require golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3
