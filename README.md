@@ -4,6 +4,7 @@
 [![Release](https://img.shields.io/github/release/vinymeuh/chardevgpio.svg)](https://github.com/vinymeuh/chardevgpio/releases/latest)
 [![GoDoc](https://godoc.org/github.com/vinymeuh/chardevgpio?status.svg)](https://godoc.org/github.com/vinymeuh/chardevgpio)
 [![Build Status](https://travis-ci.org/vinymeuh/chardevgpio.svg?branch=master)](https://travis-ci.org/vinymeuh/chardevgpio)
+[![codecov](https://codecov.io/gh/vinymeuh/chardevgpio/branch/master/graph/badge.svg)](https://codecov.io/gh/vinymeuh/chardevgpio)
 [![Go Report Card](https://goreportcard.com/badge/github.com/vinymeuh/chardevgpio)](https://goreportcard.com/report/github.com/vinymeuh/chardevgpio)
 
 **chardevgio** is a pure Go library for access the Linux GPIO character device user API.
