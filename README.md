@@ -31,9 +31,47 @@ Closing a chip does not invalidate any previously requested lines that can still
 
 ### LineInfo
 
-Lines information can be requested from the chip as long as it is open.
+Lines information can be requested from the chip at any moment as long as it is open.
 
 ```go
 li, _ := chip.LineInfo(0)
 line0Name := li.Name()
 ```
+
+### HandleRequest
+
+An HandleRequest is mandatory to setup a request an input line or an output line from the chip. The request should at minimum define the offsets of requested lines and the communication direction.
+
+```go
+lineIn_0, _    := chip.NewHandleRequest([]int{0}, gpio.HandleRequestInput)
+lineOut_8_9, _ := chip.NewHandleRequest([]int{8, 9}, gpio.HandleRequestOutput)
+```
+
+Consumer name or default values can be set on the HandleRequest:
+
+```go
+lineIn_0.WithConsumer("myapp")
+lineOut_8_9.WithDefaults([]int{1, 1})
+```
+
+Requesting lines to the chip is done passing a reference to the HandleRequest to ```Chip.RequestLines()```:
+
+```go
+c.RequestLines(lineIn_0)
+c.RequestLines(lineOut_8_9) 
+```
+
+If no errors, the returned HandleRequest can then be used to read from or write to the lines:
+
+```go
+val0 := lineIn_0.Read()
+lineOut_8_9.Write(0, 0)
+```
+
+Note that ```HandleRequest.Read()``` returns 3 values:
+
+* first one is the read value for the first line managed by the HandleRequest. It is useful when working on a request with only one line.
+* second one is an array containing read values for all lines managed by the HandleRequest
+* last one is the error if any
+
+## LineWatcher
