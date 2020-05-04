@@ -30,5 +30,9 @@ Closing a chip does not invalidate any previously requested lines that can still
 
 ### LineInfo
 
-Line information can be requested from the chip as long as it is open.
+Lines information can be requested from the chip as long as it is open.
 
+```go
+li, _ := chip.LineInfo(0)
+line0Name := li.Name()
+```
