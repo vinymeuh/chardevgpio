@@ -10,6 +10,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	gpio "github.com/vinymeuh/chardevgpio"
 )
 
@@ -22,65 +24,64 @@ const (
 
 func newChip(t *testing.T) gpio.Chip {
 	c, err := gpio.NewChip(gpioDevicePath)
-	if err != nil {
-		t.Fatalf("Unable to open chip '%s', err='%s'", gpioDevicePath, err)
-	}
+	assert.NoErrorf(t, err, "unable to open chip")
 	return c
 }
 
 func TestChip(t *testing.T) {
 	// error cases
 	_, err := gpio.NewChip("/does/not/exist")
-	if err == nil {
-		t.Errorf("Opening a non existing file should fail")
-	} else {
-		if !os.IsNotExist(err) {
-			t.Errorf("Wrong err when opening a non existing file: %s", err)
-		}
-	}
+	assert.Error(t, err, "opening a non existing file should fail")
+	assert.Truef(t, os.IsNotExist(err), "wrong err when opening a non existing file: %s", err)
 
 	_, err = gpio.NewChip("/dev/zero")
-	if err == nil {
-		t.Errorf("Opening a invalid GPIO device should fail")
-	}
+	assert.Error(t, err, "opening a invalid GPIO device should fail")
 
 	// normal case
 	c := newChip(t)
-
-	if string(c.Name()) != chipName {
-		t.Errorf("Wrong value for chip name, expected='%s', got='%s'", chipName, c.Name())
-	}
-
-	if string(c.Label()) != chipLabel {
-		t.Errorf("Wrong value for chip label, expected='%s', got='%s'", chipLabel, c.Label())
-	}
-
-	if c.Lines() != chipLines {
-		t.Errorf("Wrong value for number of lines managed by the chip, expected=%d, got=%d", chipLines, c.Lines())
-	}
-
-	if err := c.Close(); err != nil {
-		t.Errorf("Error while closing the chip, err='%s'", err)
-	}
+	assert.Equal(t, chipName, c.Name(), "wrong value for chip name")
+	assert.Equal(t, chipLabel, c.Label(), "wrong value for chip label")
+	assert.Equal(t, chipLines, c.Lines(), "wrong value for number of lines managed by the chip")
+	assert.NoErrorf(t, c.Close(), "error while closing the chip")
+	assert.Errorf(t, c.Close(), "double close a chip should return an error")
 }
 
 func TestLineInfo(t *testing.T) {
-	c := newChip(t)
-	defer c.Close()
+	var c gpio.Chip
 
+	// error cases
+	c = newChip(t)
+	_, err := c.LineInfo(chipLines + 1)
+	assert.Errorf(t, err, "requesting a LineInfo with invalide offset should fail")
+	c.Close()
+
+	// normal case
+	c = newChip(t)
 	for i := 0; i < c.Lines(); i++ {
 		li, err := c.LineInfo(i)
-		if err != nil {
-			t.Errorf("Unable to read LineInfo for line %d, err='%s'", i, err)
-		}
-		if li.Offset() != i {
-			t.Errorf("Wrong value for line offset, expected=%d, got=%d", i, li.Offset())
-		}
+		assert.NoErrorf(t, err, "unable to read LineInfo for line n°%d", i)
+		assert.Equal(t, i, li.Offset(), "wrong offset for line n°%d", i)
+
 		name := fmt.Sprintf("%s-%d", chipLabel, i)
-		if li.Name() != name {
-			t.Errorf("Wrong value for line name, expected=%s, got=%s", name, li.Name())
-		}
+		assert.Equal(t, name, li.Name(), "wrong name for line n°%d", i)
 	}
+	c.Close()
+}
+
+func TestHandleRequest(t *testing.T) {
+	// prepare request for more that 64 offsets or default values
+	toomany := make([]int, 128, 128)
+	assert.Panics(t, func() { gpio.NewHandleRequest(toomany, gpio.HandleRequestOutput) })
+	assert.Panics(t, func() { gpio.NewHandleRequest([]int{0}, gpio.HandleRequestOutput).WithDefaults(toomany) })
+}
+
+func TestRequestLineBusy(t *testing.T) {
+	c := newChip(t)
+	li := gpio.NewHandleRequest([]int{0}, gpio.HandleRequestOutput)
+	c.RequestLines(li)
+	assert.Errorf(t, c.RequestLines(li), "should have return a 'device or resource busy' error")
+	li.Close()
+	c.Close()
 }
 
 func TestRequestLine(t *testing.T) {
@@ -90,8 +91,11 @@ func TestRequestLine(t *testing.T) {
 		consumer  string
 	}{
 		{[]int{0}, gpio.HandleRequestOutput, "myapp"},
-		{[]int{1}, gpio.HandleRequestInput, ""},
-		{[]int{0, 1}, gpio.HandleRequestInput, "myappwithatoomanylongnamethisisnotreasonable"},
+		{[]int{0}, gpio.HandleRequestInput, "myappwithatoomanylongnamethisisnotreasonable"},
+		{[]int{0, 1}, gpio.HandleRequestInput, ""},
+		{[]int{0}, gpio.HandleRequestOutput | gpio.HandleRequestActiveLow, ""},
+		{[]int{0}, gpio.HandleRequestOutput | gpio.HandleRequestOpenDrain, ""},
+		{[]int{0}, gpio.HandleRequestOutput | gpio.HandleRequestOpenSource, ""},
 	}
 
 	for i, tc := range testCases {
@@ -106,19 +110,40 @@ func TestRequestLine(t *testing.T) {
 				tc.consumer = tc.consumer[0:31] // 32 including \0
 			}
 		}
-		if err := c.RequestLines(l); err != nil {
-			t.Errorf("TestRequestLine [%02d]: unable to request line, err='%s'", i, err)
-		}
+
+		err := c.RequestLines(l)
+		assert.NoErrorf(t, err, "Test n°%02d, unable to request line, err='%s'", i, err)
 
 		li, err := c.LineInfo(tc.offsets[0])
-		if err != nil {
-			t.Errorf("TestRequestLine [%02d]: unable to request line info, err='%s'", i, err)
-		}
-		if li.Consumer() != tc.consumer {
-			t.Errorf("TestRequestLine [%02d]: wrong value for line consumer, expected=%s, got=%s", i, tc.consumer, li.Consumer())
+		assert.NoErrorf(t, err, "Test n°%02d, unable to request line info, err='%s'", i, err)
+		assert.Equal(t, tc.consumer, li.Consumer(), "Test n°%02d, wrong value for line consumer", i)
+
+		switch tc.direction {
+		case tc.direction & gpio.HandleRequestInput:
+			assert.Truef(t, li.IsInput(), "Test n°%02d, should be an input line", i)
+		case tc.direction & gpio.HandleRequestOutput:
+			assert.Truef(t, li.IsOutput(), "Test n°%02d, should be an output line", i)
 		}
 
-		l.Close()
+		if tc.direction&gpio.HandleRequestActiveLow == gpio.HandleRequestActiveLow {
+			assert.Truef(t, li.IsActiveLow(), "Test n°%02d, should be active low", i)
+		} else {
+			assert.Truef(t, li.IsActiveHigh(), "Test n°%02d, should be active high", i)
+		}
+
+		if tc.direction&gpio.HandleRequestOpenDrain == gpio.HandleRequestOpenDrain {
+			assert.Truef(t, li.IsOpenDrain(), "Test n°%02d, should be open drain", i)
+		} else {
+			assert.Falsef(t, li.IsOpenDrain(), "Test n°%02d, should not be open drain", i)
+		}
+
+		if tc.direction&gpio.HandleRequestOpenSource == gpio.HandleRequestOpenSource {
+			assert.Truef(t, li.IsOpenSource(), "Test n°%02d, should be open source", i)
+		} else {
+			assert.Falsef(t, li.IsOpenSource(), "Test n°%02d, should not be open source", i)
+		}
+
+		assert.NoErrorf(t, l.Close(), "Test n°%02d, error while closing the line", i)
 		c.Close()
 	}
 }

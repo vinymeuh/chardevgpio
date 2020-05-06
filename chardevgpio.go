@@ -120,6 +120,16 @@ func (li LineInfo) IsKernel() bool {
 	return li.flags&lineFlagKernel == lineFlagKernel
 }
 
+// IsBiasPullUp returns true if the line is configured as bias pull up.
+func (li LineInfo) IsBiasPullUp() bool {
+	return li.flags&lineFlagBiasPullUp == lineFlagBiasPullUp
+}
+
+// IsBiasPullDown returns true if the line is configured as bias pull up.
+func (li LineInfo) IsBiasPullDown() bool {
+	return li.flags&lineFlagBiasPullDown == lineFlagBiasPullDown
+}
+
 // NewHandleRequest prepare a HandleRequest
 func NewHandleRequest(offsets []int, flags HandleRequestFlag) *HandleRequest {
 	if len(offsets) > handlesMax {
