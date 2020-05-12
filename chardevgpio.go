@@ -9,6 +9,7 @@ package chardevgpio
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"syscall"
@@ -125,7 +126,7 @@ func (li LineInfo) IsBiasPullUp() bool {
 	return li.flags&lineFlagBiasPullUp == lineFlagBiasPullUp
 }
 
-// IsBiasPullDown returns true if the line is configured as bias pull up.
+// IsBiasPullDown returns true if the line is configured as bias pull down.
 func (li LineInfo) IsBiasPullDown() bool {
 	return li.flags&lineFlagBiasPullDown == lineFlagBiasPullDown
 }
@@ -178,6 +179,10 @@ func (c Chip) RequestLines(request *HandleRequest) error {
 // The second return parameter contains all values returned as an array.
 // The first one is the first element of this array, useful when dealing with 1 line HandleRequest.
 func (hr *HandleRequest) Read() (int, []int, error) {
+	if hr.flags&lineFlagIsOut == lineFlagIsOut {
+		return 0, []int{}, ErrOperationNotPermitted
+	}
+
 	in := handleData{}
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(hr.fd), ioctlHandleGetLineValues, uintptr(unsafe.Pointer(&in)))
 	if errno != 0 {
@@ -199,6 +204,10 @@ func (hr *HandleRequest) Read() (int, []int, error) {
 // Write writes values to the lines handled by the HandleRequest.
 // If there is more values ​​supplied than lines managed by the HandleRequest, excess values ​​are silently ignored.
 func (hr *HandleRequest) Write(value0 int, valueN ...int) error {
+	if !(hr.flags&lineFlagIsOut == lineFlagIsOut) {
+		return ErrOperationNotPermitted
+	}
+
 	out := handleData{}
 	out.values[0] = uint8(value0)
 	for i := range valueN {
@@ -369,3 +378,6 @@ func stringToBytes(s string) [32]byte {
 	}
 	return b
 }
+
+// ErrOperationNotPermitted is returned when trying to read on an output line or to write on a input line.
+var ErrOperationNotPermitted = errors.New("operation not permitted")

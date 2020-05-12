@@ -77,10 +77,12 @@ func TestHandleRequest(t *testing.T) {
 
 func TestRequestLineBusy(t *testing.T) {
 	c := newChip(t)
+
 	li := gpio.NewHandleRequest([]int{0}, gpio.HandleRequestOutput)
 	c.RequestLines(li)
 	assert.Errorf(t, c.RequestLines(li), "should have return a 'device or resource busy' error")
 	li.Close()
+
 	c.Close()
 }
 
@@ -89,18 +91,19 @@ func TestRequestLine(t *testing.T) {
 		offsets   []int
 		direction gpio.HandleRequestFlag
 		consumer  string
+		defaults  []int
 	}{
-		{[]int{0}, gpio.HandleRequestOutput, "myapp"},
-		{[]int{0}, gpio.HandleRequestInput, "myappwithatoomanylongnamethisisnotreasonable"},
-		{[]int{0, 1}, gpio.HandleRequestInput, ""},
-		{[]int{0}, gpio.HandleRequestOutput | gpio.HandleRequestActiveLow, ""},
-		{[]int{0}, gpio.HandleRequestOutput | gpio.HandleRequestOpenDrain, ""},
-		{[]int{0}, gpio.HandleRequestOutput | gpio.HandleRequestOpenSource, ""},
+		{[]int{0}, gpio.HandleRequestOutput, "myapp", []int{}},
+		{[]int{0}, gpio.HandleRequestInput, "myappwithatoomanylongnamethisisnotreasonable", []int{}},
+		{[]int{0, 1}, gpio.HandleRequestInput, "", []int{}},
+		{[]int{0, 1}, gpio.HandleRequestOutput, "", []int{1, 1}},
+		{[]int{0}, gpio.HandleRequestOutput | gpio.HandleRequestActiveLow, "", []int{}},
+		{[]int{0}, gpio.HandleRequestOutput | gpio.HandleRequestOpenDrain, "", []int{}},
+		{[]int{0}, gpio.HandleRequestOutput | gpio.HandleRequestOpenSource, "", []int{}},
 	}
 
 	for i, tc := range testCases {
-		c := newChip(t)
-
+		// setup request
 		l := gpio.NewHandleRequest(tc.offsets, tc.direction)
 		if tc.consumer == "" {
 			tc.consumer = "?"
@@ -110,7 +113,12 @@ func TestRequestLine(t *testing.T) {
 				tc.consumer = tc.consumer[0:31] // 32 including \0
 			}
 		}
+		if len(tc.defaults) > 0 {
+			l.WithDefaults(tc.defaults)
+		}
 
+		// tests
+		c := newChip(t)
 		err := c.RequestLines(l)
 		assert.NoErrorf(t, err, "Test n°%02d, unable to request line, err='%s'", i, err)
 
@@ -143,14 +151,34 @@ func TestRequestLine(t *testing.T) {
 			assert.Falsef(t, li.IsOpenSource(), "Test n°%02d, should not be open source", i)
 		}
 
+		// teardown
 		assert.NoErrorf(t, l.Close(), "Test n°%02d, error while closing the line", i)
 		c.Close()
 	}
 }
 
+func TestRequestLineErrOperationNotPermitted(t *testing.T) {
+	c := newChip(t)
+
+	l := gpio.NewHandleRequest([]int{0}, gpio.HandleRequestOutput)
+	c.RequestLines(l)
+	_, _, err := l.Read()
+	assert.Error(t, err)
+	assert.Equal(t, gpio.ErrOperationNotPermitted, err)
+	l.Close()
+
+	l = gpio.NewHandleRequest([]int{1}, gpio.HandleRequestInput)
+	c.RequestLines(l)
+	err = l.Write(1)
+	assert.Error(t, err)
+	assert.Equal(t, gpio.ErrOperationNotPermitted, err)
+	l.Close()	
+
+	c.Close()
+}
+
 func TestEventLine(t *testing.T) {
 	c := newChip(t)
-	defer c.Close()
 
 	watcher, err := gpio.NewLineWatcher()
 	if err != nil {
@@ -164,4 +192,6 @@ func TestEventLine(t *testing.T) {
 	if err := watcher.Close(); err != nil {
 		t.Errorf("Error while closing LineWatcher, err='%s'", err)
 	}
+
+	c.Close()
 }
