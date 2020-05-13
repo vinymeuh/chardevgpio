@@ -15,15 +15,8 @@ import (
 	gpio "github.com/vinymeuh/chardevgpio"
 )
 
-const (
-	gpioDevicePath = "/dev/gpiochip0"
-	chipName       = "gpiochip0"
-	chipLabel      = "gpio-mockup-A"
-	chipLines      = 10
-)
-
 func newChip(t *testing.T) gpio.Chip {
-	c, err := gpio.NewChip(gpioDevicePath)
+	c, err := gpio.NewChip(mockChip.Path)
 	assert.NoErrorf(t, err, "unable to open chip")
 	return c
 }
@@ -39,9 +32,9 @@ func TestChip(t *testing.T) {
 
 	// normal case
 	c := newChip(t)
-	assert.Equal(t, chipName, c.Name(), "wrong value for chip name")
-	assert.Equal(t, chipLabel, c.Label(), "wrong value for chip label")
-	assert.Equal(t, chipLines, c.Lines(), "wrong value for number of lines managed by the chip")
+	assert.Equal(t, mockChip.Name, c.Name(), "wrong value for chip name")
+	assert.Equal(t, mockChip.Label, c.Label(), "wrong value for chip label")
+	assert.Equal(t, mockChip.Lines, c.Lines(), "wrong value for number of lines managed by the chip")
 	assert.NoErrorf(t, c.Close(), "error while closing the chip")
 	assert.Errorf(t, c.Close(), "double close a chip should return an error")
 }
@@ -51,7 +44,7 @@ func TestLineInfo(t *testing.T) {
 
 	// error cases
 	c = newChip(t)
-	_, err := c.LineInfo(chipLines + 1)
+	_, err := c.LineInfo(mockChip.Lines + 1)
 	assert.Errorf(t, err, "requesting a LineInfo with invalide offset should fail")
 	c.Close()
 
@@ -62,7 +55,7 @@ func TestLineInfo(t *testing.T) {
 		assert.NoErrorf(t, err, "unable to read LineInfo for line n°%d", i)
 		assert.Equal(t, i, li.Offset(), "wrong offset for line n°%d", i)
 
-		name := fmt.Sprintf("%s-%d", chipLabel, i)
+		name := fmt.Sprintf("%s-%d", mockChip.Label, i)
 		assert.Equal(t, name, li.Name(), "wrong name for line n°%d", i)
 	}
 	c.Close()
@@ -120,39 +113,39 @@ func TestRequestLine(t *testing.T) {
 		// tests
 		c := newChip(t)
 		err := c.RequestLines(l)
-		assert.NoErrorf(t, err, "Test n°%02d, unable to request line, err='%s'", i, err)
+		assert.NoErrorf(t, err, "test n°%02d, unable to request line, err='%s'", i, err)
 
 		li, err := c.LineInfo(tc.offsets[0])
-		assert.NoErrorf(t, err, "Test n°%02d, unable to request line info, err='%s'", i, err)
+		assert.NoErrorf(t, err, "test n°%02d, unable to request line info, err='%s'", i, err)
 		assert.Equal(t, tc.consumer, li.Consumer(), "Test n°%02d, wrong value for line consumer", i)
 
 		switch tc.direction {
 		case tc.direction & gpio.HandleRequestInput:
-			assert.Truef(t, li.IsInput(), "Test n°%02d, should be an input line", i)
+			assert.Truef(t, li.IsInput(), "test n°%02d, should be an input line", i)
 		case tc.direction & gpio.HandleRequestOutput:
-			assert.Truef(t, li.IsOutput(), "Test n°%02d, should be an output line", i)
+			assert.Truef(t, li.IsOutput(), "test n°%02d, should be an output line", i)
 		}
 
 		if tc.direction&gpio.HandleRequestActiveLow == gpio.HandleRequestActiveLow {
 			assert.Truef(t, li.IsActiveLow(), "Test n°%02d, should be active low", i)
 		} else {
-			assert.Truef(t, li.IsActiveHigh(), "Test n°%02d, should be active high", i)
+			assert.Truef(t, li.IsActiveHigh(), "test n°%02d, should be active high", i)
 		}
 
 		if tc.direction&gpio.HandleRequestOpenDrain == gpio.HandleRequestOpenDrain {
-			assert.Truef(t, li.IsOpenDrain(), "Test n°%02d, should be open drain", i)
+			assert.Truef(t, li.IsOpenDrain(), "test n°%02d, should be open drain", i)
 		} else {
-			assert.Falsef(t, li.IsOpenDrain(), "Test n°%02d, should not be open drain", i)
+			assert.Falsef(t, li.IsOpenDrain(), "test n°%02d, should not be open drain", i)
 		}
 
 		if tc.direction&gpio.HandleRequestOpenSource == gpio.HandleRequestOpenSource {
-			assert.Truef(t, li.IsOpenSource(), "Test n°%02d, should be open source", i)
+			assert.Truef(t, li.IsOpenSource(), "test n°%02d, should be open source", i)
 		} else {
-			assert.Falsef(t, li.IsOpenSource(), "Test n°%02d, should not be open source", i)
+			assert.Falsef(t, li.IsOpenSource(), "test n°%02d, should not be open source", i)
 		}
 
 		// teardown
-		assert.NoErrorf(t, l.Close(), "Test n°%02d, error while closing the line", i)
+		assert.NoErrorf(t, l.Close(), "test n°%02d, error while closing the line", i)
 		c.Close()
 	}
 }
@@ -172,8 +165,74 @@ func TestRequestLineErrOperationNotPermitted(t *testing.T) {
 	err = l.Write(1)
 	assert.Error(t, err)
 	assert.Equal(t, gpio.ErrOperationNotPermitted, err)
-	l.Close()	
+	l.Close()
 
+	c.Close()
+}
+
+func TestRequestLineInputRead(t *testing.T) {
+	testCases := []struct {
+		data []int
+	}{
+		{[]int{1, 1, 1}},
+		{[]int{0, 0, 0}},
+		{[]int{1, 0, 1}},
+	}
+
+	c := newChip(t)
+	l := gpio.NewHandleRequest([]int{0, 1, 2}, gpio.HandleRequestInput)
+	c.RequestLines(l)
+
+	// Read
+	for n, tc := range testCases {
+		err := mockChip.Write(tc.data)
+		assert.NoError(t, err, "unable to write using mockChip")
+
+		_, read, err := l.Read()
+		assert.NoError(t, err, "unable to read from input line")
+		for i := range tc.data {
+			assert.Equal(t, tc.data[i], read[i], "test n°%02d, value n°%d does not match", n, i)
+		}
+	}
+
+	l.Close()
+	c.Close()
+}
+
+func TestRequestLineOutputWrite(t *testing.T) {
+	testCases := []struct {
+		data []int
+	}{
+		{[]int{1, 1, 1}},
+		{[]int{0, 0, 0}},
+		{[]int{1, 0, 1}},
+	}
+
+	c := newChip(t)
+	defaults := []int{1, 1, 1}
+	l := gpio.NewHandleRequest([]int{0, 1, 2}, gpio.HandleRequestOutput).WithDefaults(defaults)
+	c.RequestLines(l)
+
+	// WithDefaults
+	mockread, err := mockChip.Read()
+	assert.NoError(t, err, "unable to read using mockChip")
+	for i := range defaults {
+		assert.Equal(t, defaults[i], mockread[i], "default value n°%d does not match", i)
+	}
+
+	// Write
+	for n, tc := range testCases {
+		err := l.Write(tc.data[0], tc.data[1:]...)
+		assert.NoError(t, err, "unable to write to output line")
+
+		mockread, err := mockChip.Read()
+		assert.NoError(t, err, "unable to read using mockChip")
+		for i := range tc.data {
+			assert.Equal(t, tc.data[i], mockread[i], "test n°%02d, value n°%d does not match", n, i)
+		}
+	}
+
+	l.Close()
 	c.Close()
 }
 
@@ -182,15 +241,15 @@ func TestEventLine(t *testing.T) {
 
 	watcher, err := gpio.NewLineWatcher()
 	if err != nil {
-		t.Errorf("Unable to create LineWatcher, err='%s'", err)
+		t.Errorf("unable to create LineWatcher, err='%s'", err)
 	}
 
 	if err := watcher.Add(c, 1, gpio.BothEdges, ""); err != nil {
-		t.Errorf("Error while adding event to the LineWatcher, err='%s'", err)
+		t.Errorf("error while adding event to the LineWatcher, err='%s'", err)
 	}
 
 	if err := watcher.Close(); err != nil {
-		t.Errorf("Error while closing LineWatcher, err='%s'", err)
+		t.Errorf("error while closing LineWatcher, err='%s'", err)
 	}
 
 	c.Close()

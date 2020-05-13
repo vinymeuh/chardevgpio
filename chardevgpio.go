@@ -155,6 +155,7 @@ func (hr *HandleRequest) WithConsumer(consumer string) *HandleRequest {
 }
 
 // WithDefaults set the default values for a prepared HandleRequest.
+// Note that setting default values on a InputLine is a nonsense but no error are returned.
 func (hr *HandleRequest) WithDefaults(defaults []int) *HandleRequest {
 	if len(defaults) > handlesMax {
 		panic(fmt.Sprintf("Number of default values exceeds maximum authorized (%d)", handlesMax))
