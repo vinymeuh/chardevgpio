@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -237,20 +238,37 @@ func TestRequestLineOutputWrite(t *testing.T) {
 }
 
 func TestEventLine(t *testing.T) {
+	done := make(chan struct{}, 1)
+	line := 0
+
+	go testEventLineWait(t, line, done)
+	mockChip.Write([]int{0})
+	mockChip.Write([]int{1})
+
+	select {
+	case <-done:
+		break
+	case <-time.After(2 * time.Second):
+		assert.Fail(t, "testEventLineWait did not finished before timeout")
+	}
+}
+
+func testEventLineWait(t *testing.T, line int, done chan struct{}) {
 	c := newChip(t)
 
 	watcher, err := gpio.NewLineWatcher()
-	if err != nil {
-		t.Errorf("unable to create LineWatcher, err='%s'", err)
-	}
+	assert.NoError(t, err, "unable to create LineWatcher")
 
-	if err := watcher.Add(c, 1, gpio.BothEdges, ""); err != nil {
-		t.Errorf("error while adding event to the LineWatcher, err='%s'", err)
-	}
+	err = watcher.Add(c, line, gpio.RisingEdge, "testEventLineWait")
+	assert.NoError(t, err, "unable to add event to the LineWatcher")
 
-	if err := watcher.Close(); err != nil {
-		t.Errorf("error while closing LineWatcher, err='%s'", err)
-	}
+	event, err := watcher.Wait()
+	assert.NoError(t, err, "unable to Wait on LineWatcher")
+	assert.True(t, event.IsRising(), "trapped event is not of expected type")
 
+	err = watcher.Close()
+	assert.NoErrorf(t, err, "error while closing LineWatcher")
 	c.Close()
+
+	done <- struct{}{}
 }

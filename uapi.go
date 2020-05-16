@@ -131,11 +131,11 @@ type EventLine struct {
 
 // Event types
 const (
-	EventRisingEdge  = 0x01
-	EventFallingEdge = 0x02
+	eventRisingEdge  = 0x01
+	eventFallingEdge = 0x02
 )
 
-// Event represents a occured event.
+// Event represents a occurred event.
 type Event struct {
 	Timestamp uint64
 	ID        uint32

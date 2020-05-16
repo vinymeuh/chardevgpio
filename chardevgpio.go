@@ -230,6 +230,16 @@ func (hr HandleRequest) Close() error {
 	return syscall.Close(int(hr.fd))
 }
 
+//  IsRising returns true for event on a rising edge.
+func (e Event) IsRising() bool {
+	return e.ID == eventRisingEdge
+}
+
+// IsFalling returns true for event on a falling edge.
+func (e Event) IsFalling() bool {
+	return e.ID == eventFallingEdge
+}
+
 // LineWatcher is a receiver of events for a set of event lines.
 type LineWatcher struct {
 	epfd int
