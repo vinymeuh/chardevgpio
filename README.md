@@ -74,4 +74,15 @@ Note that ```HandleRequest.Read()``` returns 3 values:
 * second one is an array containing read values for all lines managed by the HandleRequest
 * last one is the error if any
 
-## LineWatcher
+### LineWatcher
+
+## Tests
+
+During development, the library is tested using the Linux kernel module **gpio-mockup** on an x86_64 environment.
+
+```
+> ./setup-test.sh   # to be run once, prompts for sudo password
+> make test
+```
+
+For real world tests on a Raspberry, see command line utilities provided under cmd directory.
