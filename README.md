@@ -76,6 +76,33 @@ Note that ```HandleRequest.Read()``` returns 3 values:
 
 ### LineWatcher
 
+Event on an input line can be trapped using a LineWatcher:
+
+```go
+watcher, _ := gpio.NewLineWatcher()
+```
+
+Add to it lines and events to be watched:
+
+```go
+watcher.Add(c, 0, gpio.RisingEdge, "wait rising edge on line 0")
+watcher.Add(c, 1, gpio.FallingEdge, "wait falling edge on line 1")
+watcher.Add(c, 2, gpio.BothEdges, "wait state change on line 2")
+```
+
+The watcher can then run indefinitely and call a handler function for each event trapped:
+
+```go
+func myFuncHandler(evd Event) { ... }
+watcher.WaitForEver(myFuncHandler)
+```
+
+For simpler cases, the watcher can be used to block waiting for the first event occurrence:
+
+```go
+event, _ := watcher.Wait()
+```
+
 ## Tests
 
 During development, the library is tested using the Linux kernel module **gpio-mockup** on an x86_64 environment.
