@@ -230,7 +230,7 @@ func (hr HandleRequest) Close() error {
 	return syscall.Close(int(hr.fd))
 }
 
-//  IsRising returns true for event on a rising edge.
+// IsRising returns true for event on a rising edge.
 func (e Event) IsRising() bool {
 	return e.ID == eventRisingEdge
 }
