@@ -1,6 +1,7 @@
 // Copyright 2020 VinyMeuh. All rights reserved.
 // Use of the source code is governed by a MIT-style license that can be found in the LICENSE file.
 
+//go:build linux
 // +build linux
 
 // Package chardevgpio is a library to the Linux GPIO Character device API.
@@ -232,12 +233,12 @@ func (hr HandleRequest) Close() error {
 
 // IsRising returns true for event on a rising edge.
 func (e Event) IsRising() bool {
-	return e.ID == eventRisingEdge
+	return e.ID == EventRisingEdge
 }
 
 // IsFalling returns true for event on a falling edge.
 func (e Event) IsFalling() bool {
-	return e.ID == eventFallingEdge
+	return e.ID == EventFallingEdge
 }
 
 // LineWatcher is a receiver of events for a set of event lines.

@@ -1,6 +1,7 @@
 // Copyright 2020 VinyMeuh. All rights reserved.
 // Use of the source code is governed by a MIT-style license that can be found in the LICENSE file.
 
+//go:build linux
 // +build linux
 
 package chardevgpio
@@ -131,8 +132,8 @@ type EventLine struct {
 
 // Event types
 const (
-	eventRisingEdge  = 0x01
-	eventFallingEdge = 0x02
+	EventRisingEdge  = 0x01
+	EventFallingEdge = 0x02
 )
 
 // Event represents a occurred event.
