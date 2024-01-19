@@ -14,10 +14,10 @@ import (
 
 func printEventData(evd gpio.Event) {
 	fmt.Printf("[%d.%09d]", evd.Timestamp/1000000000, evd.Timestamp%1000000000)
-	if evd.ID&gpio.EventRisingEdge == gpio.EventRisingEdge {
+	if evd.IsRising() {
 		fmt.Fprintln(os.Stdout, " RISING")
 	}
-	if evd.ID&gpio.EventFallingEdge == gpio.EventFallingEdge {
+	if evd.IsFalling() {
 		fmt.Fprintln(os.Stdout, " FALLING")
 	}
 }
